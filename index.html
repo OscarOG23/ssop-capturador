@@ -1,0 +1,3105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<!-- Sin maximum-scale: bloquear el zoom impide ampliar el texto (WCAG 1.4.4 / HIG Accesibilidad
+     "permite ampliar el texto al menos 200%"). viewport-fit=cover + env(safe-area-*) para el notch. -->
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SSOP · Productividad Mensual</title>
+<link rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap"></noscript>
+<style>
+/* ── DESIGN TOKENS ─────────────────────────────────── */
+:root{
+  color-scheme:light dark;
+  /* Brand — el oro institucional (--o) es un color de RELLENO/BORDE.
+     Como TEXTO no alcanza 4.5:1 (2.64:1 sobre --op), por eso existe --o-tx. */
+  --g:  #8A1E32; --gd: #6E1727; --gl: #A8263D; --gxl: #F9ECF0;
+  --o:  #B78D55; --ol: #D4B483; --op: #F5EFE5;
+  --o-tx:#7D6030;            /* oro legible: 5.12:1 sobre --op, 5.85:1 sobre blanco */
+  --o-gr:#9C7742;            /* oro para gráficas/sparklines: 4.09:1 sobre blanco */
+  /* Neutrals */
+  --ink:#1A1614; --ink2:#2D2926; --mu:#6B7280;
+  --mu2:#6E7480;             /* antes #9CA3AF = 2.54:1 (ilegible). Ahora 4.69:1 */
+  --bd:#E8E3DD; --bd2:#F0ECE7; --pa:#FAF9F7; --wh:#FFFFFF;
+  --sombra:26,22,20;         /* rgb base de las sombras, para poder invertirla en oscuro */
+  /* Semantic */
+  --ve:#166534; --ve-bg:#DCFCE7;
+  --am:#92400E; --am-bg:#FEF3C7;
+  --am-fill:#A6480A;         /* amarillo del semáforo: blanco encima da 5.91:1 (antes #D97706 = 3.19:1) */
+  --ro:#9B1C2E; --ro-bg:#FFE4E6;
+  --info:#1D4ED8; --info-bg:#DBEAFE;
+  --sev-tx:#565C68;          /* 5.71:1 sobre --bd2 */
+  /* Rellenos del semáforo: color de FONDO con texto blanco encima.
+     Se mantienen oscuros en ambos modos (>=4.5:1 con blanco). */
+  --ve-fill:#166534; --ro-fill:#9B1C2E; --gris-fill:#5B6270;
+  /* Barras de avance: NO llevan texto encima, solo deben separarse de su
+     pista (>=3:1). En oscuro pueden ser claras; los chips no. */
+  --bar-ve:#166534; --bar-am:#A6480A; --bar-ro:#9B1C2E; --bar-gris:#5B6270;
+  /* Shadows */
+  --s0:0 1px 2px rgba(var(--sombra),.05);
+  --s1:0 1px 4px rgba(var(--sombra),.07),0 2px 8px rgba(var(--sombra),.04);
+  --s2:0 4px 16px rgba(var(--sombra),.09),0 2px 6px rgba(var(--sombra),.04);
+  --s3:0 8px 32px rgba(var(--sombra),.12),0 4px 12px rgba(var(--sombra),.06);
+  --s4:0 20px 60px rgba(var(--sombra),.18),0 8px 20px rgba(var(--sombra),.1);
+  /* Motion */
+  --eo:cubic-bezier(0.16,1,0.3,1);
+  --tf:150ms; --tm:250ms; --ts:400ms;
+  /* Radius */
+  --r1:6px; --r2:10px; --r3:14px; --r4:20px; --rf:9999px;
+  /* Área táctil mínima (HIG móvil: 44pt recomendado, 28pt mínimo absoluto) */
+  --tap:44px;
+}
+
+/* ── MODO OSCURO ────────────────────────────────────
+   Se redefinen SOLO los tokens; ninguna regla de abajo cambia.
+   El acuse institucional queda excluido a propósito: es un documento
+   para imprimir en papel blanco, no una superficie de UI. */
+@media(prefers-color-scheme:dark){
+  :root{
+    --g:#D98BA0; --gd:#EBAEBF; --gl:#C4738A; --gxl:#2E1F25;
+    --o:#D4B483; --ol:#B78D55; --op:#2C2419;
+    --o-tx:#E3BE86; --o-gr:#C79E62;
+    --ink:#F5F2EF; --ink2:#E4DFDA; --mu:#B0AAA4; --mu2:#9A948E;
+    --bd:#3A3430; --bd2:#2B2622; --pa:#17141A; --wh:#211D22;
+    --sombra:0,0,0;
+    --ve:#7EE0A6; --ve-bg:#123020;
+    --am:#F0C078; --am-bg:#3A2A12; --am-fill:#A6480A;
+    --ro:#F5A3AF; --ro-bg:#3A1620;
+    --info:#9DBEFF; --info-bg:#16244A;
+    --sev-tx:#B8B2AC;
+    --ve-fill:#15693A; --ro-fill:#A8203A; --gris-fill:#5B6270;
+    --bar-ve:#7EE0A6; --bar-am:#F0C078; --bar-ro:#F5A3AF; --bar-gris:#B0AAA4;
+  }
+  /* El encabezado guinda es identidad institucional: se mantiene oscuro y sólido,
+     no se aclara con el resto de la paleta. */
+  header{background:linear-gradient(135deg,#4A0F1C 0%,#5E1523 55%,#73202F 100%)}
+  .btn,.btn-enviar{background:linear-gradient(135deg,#7A1A2C,#96263C);color:#fff}
+  th{background:#5E1523;color:#fff}
+  .sec-num{color:#fff}
+  .smf-circulo{color:#fff}
+  .upload-preview img{opacity:.92}
+}
+
+/* ── RESET ──────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:focus-visible{outline:2px solid var(--g);outline-offset:2px;border-radius:2px}
+body{
+  font-family:'Montserrat',system-ui,sans-serif;
+  background:var(--pa);
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.6;
+  padding-bottom:calc(48px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;
+}
+.oculto{display:none!important}
+/* Bloquea el scroll del fondo mientras hay un diálogo abierto */
+body.modal-abierto{overflow:hidden}
+
+/* Oculto a la vista pero presente para lector de pantalla y foco de teclado.
+   No usar display:none en controles reales: los saca del árbol de accesibilidad. */
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+/* ── MOTION: respeto global a "reducir movimiento" ───
+   Antes solo se desactivaba la animación del acordeón; el pulso del indicador
+   de sincronización, las barras del semáforo y los levantamientos en hover
+   seguían moviéndose. HIG Accesibilidad > Cognitivo. */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.001ms!important;
+    scroll-behavior:auto!important;
+  }
+  .sync .dot.spin{animation:none;opacity:1}
+}
+/* Los levantamientos en hover solo donde hay puntero real: en táctil el
+   estado :hover se queda "pegado" tras el toque. */
+@media(hover:none){
+  .btn:hover,.btn-enviar:hover,.btn-ctl:hover,.anl-fila:hover,
+  .smf-item:hover,.admin-link a:hover{transform:none!important}
+}
+
+/* ── HEADER ─────────────────────────────────────────── */
+header{
+  background:linear-gradient(135deg,var(--gd) 0%,var(--g) 55%,var(--gl) 100%);
+  color:#fff;
+  padding:0 16px;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 16px rgba(110,23,39,.4);
+  border-bottom:2px solid rgba(183,141,85,.35);
+}
+.hdr{
+  display:flex;justify-content:space-between;align-items:center;
+  height:56px;max-width:640px;margin:0 auto;
+}
+.htit .h1{font-size:15px;font-weight:800;letter-spacing:.1px}
+.htit .h2{font-size:11px;font-weight:500;opacity:.88;letter-spacing:.4px;margin-top:1px}
+.sync{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:600;
+  background:rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.32);
+  border-radius:var(--rf);
+  padding:5px 12px;letter-spacing:.2px;flex-shrink:0;
+}
+/* El punto lleva forma además de color (● en línea, ✕ error, ◐ sincronizando)
+   y el texto contiguo dice el estado: no depende del color. */
+.sync .dot{
+  width:14px;height:14px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:800;color:#3B1420;background:#6EE7B7;
+}
+.sync .dot.err{background:#FCA5A5}
+.sync .dot.spin{background:var(--ol);animation:pulse .9s ease-in-out infinite alternate}
+@keyframes pulse{to{opacity:.35}}
+
+/* ── SETUP ──────────────────────────────────────────── */
+.setup-wrap{padding:32px 16px 24px}
+.card{
+  background:var(--wh);border-radius:var(--r4);
+  padding:28px 24px;box-shadow:var(--s2);
+  max-width:480px;margin:0 auto;
+  border:1px solid var(--bd2);
+}
+.card-title{font-size:20px;font-weight:800;color:var(--g);margin-bottom:4px;letter-spacing:-.3px}
+.card-sub{font-size:14px;color:var(--ink2);font-weight:400;margin-bottom:24px}
+
+/* ── LABELS + INPUTS ────────────────────────────────── */
+/* Etiquetas en caja alta y 11px: es el texto que más se lee en un formulario
+   de captura y era el menos legible. Caja normal, 13px y peso 600 conservan la
+   jerarquía sin gritar. HIG Tipografía > Legibilidad; Contenido > usa caja normal. */
+label{
+  display:block;font-size:13px;font-weight:600;
+  letter-spacing:0;
+  margin-bottom:6px;margin-top:18px;color:var(--gd);
+  line-height:1.45;
+}
+select,input[type=text],input[type=number],input[type=password],input[type=month],input[type=date],textarea{
+  width:100%;border:1.5px solid var(--bd);border-radius:var(--r2);
+  padding:11px 14px;font-size:16px;/* <16px provoca zoom automático en iOS al enfocar */
+  font-family:inherit;font-weight:500;
+  min-height:var(--tap);
+  background:var(--wh);color:var(--ink);outline:none;
+  transition:border-color var(--tf) var(--eo),box-shadow var(--tf) var(--eo);
+  -webkit-appearance:none;
+  appearance:none;
+}
+/* Campo con error: además del color, un borde grueso y un mensaje de texto.
+   HIG Color > "no dependas solo del color para comunicar información". */
+.campo-error input,.campo-error select,.campo-error textarea{
+  border-color:var(--ro);border-width:2px;
+}
+.msg-error{
+  display:flex;align-items:flex-start;gap:6px;
+  font-size:12px;font-weight:600;color:var(--ro);margin-top:6px;line-height:1.4;
+}
+select:focus,input:focus,textarea:focus{
+  border-color:var(--g);box-shadow:0 0 0 3px rgba(138,30,50,.1);
+}
+textarea{resize:vertical;min-height:80px;line-height:1.6}
+
+/* ── IDENTITY BAR ───────────────────────────────────── */
+.identity{
+  background:var(--wh);border-bottom:1px solid var(--bd);
+  padding:12px 16px;display:flex;justify-content:space-between;align-items:center;
+}
+.id-nombre{font-weight:700;font-size:15px;color:var(--g);letter-spacing:-.1px}
+.id-info{font-size:12px;color:var(--mu);margin-top:2px;font-weight:500}
+.lnk{
+  font-size:12px;color:var(--o-tx);text-decoration:none;font-weight:700;
+  letter-spacing:.2px;
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:var(--tap);padding:6px 16px;
+  border:1.5px solid rgba(183,141,85,.45);
+  border-radius:var(--rf);background:var(--op);
+  font-family:inherit;cursor:pointer;flex-shrink:0;
+  transition:background var(--tf) var(--eo),color var(--tf) var(--eo),border-color var(--tf) var(--eo);
+}
+.lnk:hover{background:var(--o-tx);color:var(--wh);border-color:var(--o-tx)}
+
+/* ── TABS ───────────────────────────────────────────── */
+.tabs{
+  display:flex;background:var(--wh);
+  border-bottom:1px solid var(--bd);
+  padding:0 16px;gap:4px;
+}
+.tab-btn{
+  flex:1;max-width:160px;padding:12px 8px;min-height:var(--tap);
+  font-size:13px;font-weight:600;letter-spacing:0;
+  border:none;background:none;cursor:pointer;color:var(--mu);
+  border-bottom:2.5px solid transparent;margin-bottom:-1px;
+  transition:color var(--tf),border-color var(--tf);font-family:inherit;
+}
+/* La pestaña activa no se distingue solo por color: también por peso
+   tipográfico y por el subrayado. HIG Color > Color inclusivo. */
+.tab-btn.activa{color:var(--g);border-bottom-color:var(--g);font-weight:800}
+
+/* ── PERIODO BAR ────────────────────────────────────── */
+.periodo-bar{
+  padding:10px 16px;display:flex;align-items:center;gap:10px;
+  background:var(--gxl);border-bottom:1px solid rgba(138,30,50,.12);
+}
+.periodo-lbl{font-size:13px;font-weight:700;color:var(--gd);letter-spacing:.2px;flex-shrink:0}
+.periodo-fijo{font-size:16px;font-weight:800;color:var(--gd);letter-spacing:-.2px;flex:1}
+.periodo-sel{
+  width:auto;flex:0 1 auto;min-width:150px;min-height:var(--tap);
+  padding:7px 32px 7px 12px;font-size:15px;font-weight:700;color:var(--gd);
+  border:1.5px solid rgba(138,30,50,.45);border-radius:var(--r2);
+  background:var(--wh) url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A1E32' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
+}
+.badge{
+  font-size:12px;font-weight:800;letter-spacing:.3px;
+  padding:5px 12px;border-radius:var(--rf);
+  display:inline-flex;align-items:center;gap:5px;
+}
+.badge.abierto{background:var(--ve-bg);color:var(--ve)}
+.badge.cerrado{background:var(--ro-bg);color:var(--ro)}
+/* Marca de forma (● / ✕) además del color, para el estado del periodo. */
+.badge::before{font-size:11px}
+.badge.abierto::before{content:'●'}
+.badge.cerrado::before{content:'✕'}
+
+/* ── ENVIADO CARD ───────────────────────────────────── */
+.enviado-card{
+  margin:16px;background:var(--wh);border-radius:var(--r4);
+  padding:24px;border-left:4px solid var(--ve);box-shadow:var(--s1);
+}
+.vc-titulo{
+  display:flex;align-items:center;gap:8px;
+  font-size:16px;font-weight:800;color:var(--ve);
+  margin-bottom:12px;letter-spacing:-.2px;
+}
+.vc-folio{
+  font-family:ui-monospace,'SF Mono','Fira Code',monospace;
+  background:var(--ve-bg);border:1px solid var(--ve);
+  border-radius:var(--r1);padding:10px 12px;
+  font-size:14px;margin-bottom:14px;color:var(--ve);letter-spacing:.4px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+}
+.vc-copiar{
+  background:none;border:1px solid var(--ve);border-radius:var(--rf);
+  color:var(--ve);font-family:inherit;font-size:12px;font-weight:700;
+  padding:5px 12px;min-height:36px;cursor:pointer;white-space:nowrap;
+}
+.vc-copiar:hover{background:var(--ve);color:var(--wh)}
+.vc-nota{font-size:13px;color:var(--ink2);margin-bottom:16px;line-height:1.7;font-weight:500}
+.resumen-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.rg-item{background:var(--pa);border:1px solid var(--bd2);border-radius:var(--r2);padding:10px 12px}
+.rg-lbl{font-size:12px;font-weight:600;letter-spacing:0;color:var(--mu)}
+.rg-val{font-size:22px;font-weight:800;color:var(--gd);margin-top:2px}
+
+/* ── CERRADO CARD ───────────────────────────────────── */
+.cerrado-card{
+  margin:16px;background:var(--wh);border-radius:var(--r4);
+  padding:40px 24px;text-align:center;
+  border:1px solid var(--bd);box-shadow:var(--s1);
+}
+.cerrado-ico{
+  width:56px;height:56px;background:var(--ro-bg);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 16px;color:var(--ro);
+}
+.cerrado-card h3{color:var(--ro);font-size:18px;font-weight:800;margin-bottom:8px}
+.cerrado-card p{font-size:14px;color:var(--ink2);line-height:1.7;max-width:300px;margin:0 auto;font-weight:500}
+
+/* ── FORM ───────────────────────────────────────────── */
+.form-wrap{padding:12px 0 20px}
+.seccion{
+  background:var(--wh);margin:10px 14px;border-radius:var(--r3);
+  overflow:hidden;border:1px solid var(--bd2);
+  box-shadow:var(--s0);
+  transition:box-shadow var(--tm) var(--eo);
+}
+.seccion:has(.sec-body.vis){box-shadow:var(--s1)}
+
+/* Ahora es un <button>: antes era un <div onclick>, imposible de abrir con
+   teclado y sin estado anunciable. HIG Accesibilidad > Movilidad y Habla. */
+.sec-head{
+  display:flex;align-items:center;padding:14px 16px;
+  width:100%;min-height:var(--tap);
+  font-family:inherit;text-align:left;
+  background:none;border:none;
+  cursor:pointer;user-select:none;gap:12px;
+  border-left:3px solid transparent;
+  transition:background var(--tf);
+}
+.sec-head:hover{background:var(--pa)}
+.sec-head:active{background:var(--bd2)}
+.sec-head:focus-visible{outline:2px solid var(--g);outline-offset:-3px}
+
+.sec-num{
+  width:26px;height:26px;border-radius:var(--r1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;color:#fff;flex-shrink:0;
+}
+.sec-tit{flex:1;font-weight:700;font-size:13px;letter-spacing:.1px;color:var(--ink2)}
+.sec-ico{color:var(--mu2);transition:transform var(--tm) var(--eo);flex-shrink:0}
+.sec-head.abierta .sec-ico{transform:rotate(180deg)}
+
+.sec-head[data-s="1"]{border-left-color:var(--g)}.sec-head[data-s="1"] .sec-num{background:var(--g)}
+.sec-head[data-s="2"]{border-left-color:var(--o)}.sec-head[data-s="2"] .sec-num{background:var(--o)}
+.sec-head[data-s="3"]{border-left-color:#1B7F4B}.sec-head[data-s="3"] .sec-num{background:#1B7F4B}
+.sec-head[data-s="4"]{border-left-color:#2563EB}.sec-head[data-s="4"] .sec-num{background:#2563EB}
+.sec-head[data-s="5"]{border-left-color:var(--mu)}.sec-head[data-s="5"] .sec-num{background:var(--mu)}
+
+.sec-body{
+  padding:4px 16px 20px;display:none;
+  border-top:1px solid var(--bd2);
+  animation:slideDown var(--tm) var(--eo);
+}
+.sec-body.vis{display:block}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.sec-body{animation:none}}
+
+/* ── CAMPOS ─────────────────────────────────────────── */
+.campo{margin-top:16px}
+.campo label{margin-top:0}
+.campo-row{display:flex;align-items:center;gap:8px}
+.campo-row input[type=number]{flex:1}
+.meta-badge{
+  flex-shrink:0;font-size:12px;font-weight:700;letter-spacing:.2px;
+  background:var(--op);
+  border:1px solid rgba(183,141,85,.45);border-radius:var(--rf);
+  padding:6px 12px;color:var(--o-tx);white-space:nowrap;
+}
+
+/* ── REFS ───────────────────────────────────────────── */
+.refs-total-row{display:flex;align-items:center;gap:8px}
+.refs-total-row input{flex:1}
+.ref-toggle{
+  font-size:13px;color:var(--o-tx);font-weight:700;cursor:pointer;
+  white-space:nowrap;background:var(--op);
+  border:1.5px solid rgba(183,141,85,.45);
+  padding:6px 14px;min-height:var(--tap);font-family:inherit;border-radius:var(--rf);
+  display:flex;align-items:center;justify-content:center;gap:5px;flex-shrink:0;
+  transition:background var(--tf) var(--eo),color var(--tf) var(--eo),border-color var(--tf) var(--eo);
+}
+.ref-toggle:hover{background:var(--o-tx);color:var(--wh);border-color:var(--o-tx)}
+.refs-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  margin-top:12px;padding:14px;
+  background:var(--pa);border-radius:var(--r2);border:1px solid var(--bd2);
+}
+.ref-item{display:flex;flex-direction:column;gap:4px}
+.ref-item label{font-size:12px;color:var(--ink2);font-weight:600;margin:0;letter-spacing:0}
+.ref-item input{padding:8px 10px;font-size:16px}
+@media(max-width:360px){.refs-grid{grid-template-columns:1fr}}
+
+/* ── UPLOAD ─────────────────────────────────────────── */
+.upload-area{margin-top:10px}
+.upload-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 16px;min-height:var(--tap);
+  border:1.5px dashed var(--bd);border-radius:var(--r2);
+  cursor:pointer;font-size:14px;font-weight:600;color:var(--ink2);
+  background:var(--pa);font-family:inherit;width:100%;
+  transition:border-color var(--tf) var(--eo),color var(--tf) var(--eo),background var(--tf) var(--eo);
+}
+.upload-btn:hover{border-color:var(--g);color:var(--g);background:var(--gxl)}
+/* El input mantiene el foco de teclado: con display:none desaparecía del
+   árbol de accesibilidad y no se podía llegar a él tabulando. */
+input[type=file]{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+input[type=file]:focus-visible + .upload-btn,
+.upload-btn:focus-within{outline:2px solid var(--g);outline-offset:2px}
+.upload-preview{
+  margin-top:8px;font-size:13px;font-weight:500;color:var(--ink2);
+  background:var(--pa);border-radius:var(--r2);padding:8px 12px;border:1px solid var(--bd2);
+}
+/* contain, no cover: es evidencia fotográfica, recortarla oculta parte de lo
+   que el promotor necesita verificar antes de enviar. */
+.upload-preview img{max-width:100%;border-radius:var(--r1);margin-top:6px;max-height:180px;object-fit:contain}
+.upload-quitar{
+  margin-top:8px;background:none;border:1.5px solid var(--bd);border-radius:var(--rf);
+  color:var(--ro);font-family:inherit;font-size:12px;font-weight:700;
+  padding:6px 14px;min-height:36px;cursor:pointer;
+}
+.upload-quitar:hover{background:var(--ro-bg);border-color:var(--ro)}
+
+/* ── CTA ────────────────────────────────────────────── */
+/* Caja alta + tracking en 13px hacía que el botón principal se leyera como
+   etiqueta, no como acción. Caja normal a 16px lo devuelve a ser el CTA. */
+.btn-enviar{
+  width:calc(100% - 28px);margin:8px 14px;padding:15px;
+  min-height:var(--tap);
+  background:linear-gradient(135deg,var(--gd),var(--g));
+  color:#fff;border:none;border-radius:var(--r3);
+  font-size:16px;font-weight:700;letter-spacing:.2px;
+  cursor:pointer;font-family:inherit;
+  box-shadow:0 4px 16px rgba(138,30,50,.3);
+  transition:box-shadow var(--tm) var(--eo),transform var(--tm) var(--eo),background var(--tm) var(--eo);
+}
+.btn-enviar:hover{box-shadow:0 6px 24px rgba(138,30,50,.42);transform:translateY(-1px)}
+.btn-enviar:active{background:var(--gd);transform:none;box-shadow:none}
+.btn-enviar:disabled{background:var(--mu);box-shadow:none;cursor:not-allowed;transform:none;opacity:.85}
+
+.btn{
+  width:100%;padding:13px;min-height:var(--tap);
+  background:linear-gradient(135deg,var(--gd),var(--g));
+  color:#fff;border:none;border-radius:var(--r3);
+  font-size:16px;font-weight:700;letter-spacing:.2px;
+  cursor:pointer;font-family:inherit;margin-top:20px;
+  box-shadow:0 4px 16px rgba(138,30,50,.3);
+  transition:box-shadow var(--tm) var(--eo),transform var(--tm) var(--eo),background var(--tm) var(--eo);
+}
+.btn:hover{box-shadow:0 6px 24px rgba(138,30,50,.42);transform:translateY(-1px)}
+.btn:active{background:var(--gd);transform:none;box-shadow:none}
+.btn:disabled{background:var(--mu);box-shadow:none;cursor:not-allowed;transform:none;opacity:.85}
+/* Botón secundario: misma altura táctil, jerarquía visual menor. */
+.btn-sec{
+  width:100%;padding:13px;min-height:var(--tap);
+  background:var(--wh);color:var(--gd);
+  border:1.5px solid var(--bd);border-radius:var(--r3);
+  font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;
+  transition:background var(--tf) var(--eo),border-color var(--tf) var(--eo);
+}
+.btn-sec:hover{background:var(--gxl);border-color:var(--g)}
+
+/* ── AVANCE ─────────────────────────────────────────── */
+.avance-wrap{padding:16px 14px}
+.avance-tit{
+  font-weight:800;font-size:14px;letter-spacing:.2px;
+  color:var(--gd);margin-bottom:16px;
+  display:flex;align-items:center;gap:10px;
+}
+.avance-tit::after{content:'';flex:1;height:1px;background:var(--bd)}
+.smf-item{
+  background:var(--wh);border-radius:var(--r3);
+  padding:14px 16px;margin-bottom:8px;
+  display:flex;align-items:center;gap:14px;
+  box-shadow:var(--s0);border:1px solid var(--bd2);
+  transition:box-shadow var(--tf);
+}
+.smf-item:hover{box-shadow:var(--s1)}
+.smf-circulo{
+  width:46px;height:46px;border-radius:var(--r1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;color:#fff;flex-shrink:0;letter-spacing:-.5px;
+}
+.smf-circulo.verde{background:var(--ve-fill)}
+.smf-circulo.amarillo{background:var(--am-fill)}   /* antes #D97706: 3.19:1 con texto blanco */
+.smf-circulo.rojo{background:var(--ro-fill)}
+.smf-circulo.gris{background:var(--gris-fill)}
+.smf-info{flex:1;min-width:0}
+.smf-nombre{font-size:14px;font-weight:600;color:var(--ink2);margin-bottom:6px}
+.smf-barra-wrap{height:6px;background:var(--bd);border-radius:var(--rf);overflow:hidden}
+.smf-barra{height:6px;border-radius:var(--rf);transition:width .5s var(--eo)}
+.smf-barra.verde{background:var(--bar-ve)}
+.smf-barra.amarillo{background:var(--bar-am)}
+.smf-barra.rojo{background:var(--bar-ro)}
+.smf-barra.gris{background:var(--bar-gris)}
+.smf-vals{font-size:12px;color:var(--mu);margin-top:4px;font-weight:600}
+/* Etiqueta textual del estado, junto al color. Sin ella el semáforo es
+   ininteligible para daltonismo rojo-verde, que es justo el par que usa. */
+.smf-estado{font-size:12px;font-weight:700;margin-top:2px}
+.smf-estado.verde{color:var(--ve)}
+.smf-estado.amarillo{color:var(--am)}
+.smf-estado.rojo{color:var(--ro)}
+.smf-estado.gris{color:var(--mu)}
+
+/* ── ADMIN ──────────────────────────────────────────── */
+.admin-overlay{
+  position:fixed;inset:0;
+  background:rgba(10,6,4,.65);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  z-index:200;display:flex;flex-direction:column;overflow-y:auto;
+}
+.admin-panel{
+  background:var(--wh);width:100%;max-width:720px;
+  margin:0 auto;min-height:100%;padding:24px 18px 48px;
+}
+.admin-hdr{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--bd2);
+  position:sticky;top:0;z-index:10;
+  background:var(--wh);margin-left:-18px;margin-right:-18px;padding-left:18px;padding-right:18px;
+  padding-top:16px;
+}
+.admin-hdr-icon{
+  width:36px;height:36px;background:var(--gxl);border-radius:var(--r2);
+  display:flex;align-items:center;justify-content:center;color:var(--g);flex-shrink:0;
+}
+.admin-hdr h2{flex:1;font-size:17px;font-weight:800;color:var(--g);letter-spacing:-.3px}
+.icon-btn{
+  background:var(--pa);border:1px solid var(--bd);border-radius:var(--r2);
+  cursor:pointer;width:var(--tap);height:var(--tap);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--ink2);transition:background var(--tf) var(--eo),color var(--tf) var(--eo);
+}
+.icon-btn:hover{background:var(--bd);color:var(--ink)}
+
+.admin-login{max-width:340px;margin:48px auto}
+.admin-login h3{font-size:18px;font-weight:800;color:var(--g);margin-bottom:16px;letter-spacing:-.2px}
+
+.periodo-sel-wrap{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.periodo-sel-wrap label{
+  font-weight:700;font-size:13px;white-space:nowrap;color:var(--gd);
+  margin:0;letter-spacing:0;
+}
+.periodo-sel-wrap input{flex:1;max-width:180px}
+
+.admin-ctl{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.btn-ctl{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:8px 16px;min-height:var(--tap);border:none;border-radius:var(--r2);
+  font-size:14px;font-weight:700;letter-spacing:.1px;
+  cursor:pointer;font-family:inherit;
+  transition:filter var(--tf) var(--eo),transform var(--tf) var(--eo);
+}
+/* rojo/verde SOLO para cerrar/abrir recepción. Cualquier otra acción usa
+   .accion (guinda) o .reload (neutra). */
+.btn-ctl.cerrar{background:var(--ro-bg);color:var(--ro)}
+.btn-ctl.abrir{background:var(--ve-bg);color:var(--ve)}
+.btn-ctl.accion{background:var(--gxl);color:var(--gd);border:1px solid rgba(138,30,50,.28)}
+.btn-ctl.reload{background:var(--pa);color:var(--ink2);border:1px solid var(--bd)}
+.btn-ctl.btn-mini{padding:5px 12px;font-size:13px;min-height:36px}
+.btn-ctl:hover{filter:brightness(.93);transform:translateY(-1px)}
+.btn-ctl:disabled{opacity:.5;cursor:not-allowed;transform:none;filter:none}
+
+.admin-estado{
+  font-size:12px;font-weight:800;letter-spacing:.3px;
+  padding:6px 16px;border-radius:var(--rf);display:inline-block;margin-bottom:14px;
+}
+.admin-estado.abierto{color:var(--ve);background:var(--ve-bg)}
+.admin-estado.cerrado{color:var(--ro);background:var(--ro-bg)}
+
+.admin-stats{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.admin-stat{
+  background:var(--pa);border:1px solid var(--bd2);border-radius:var(--r2);
+  padding:12px 16px;font-size:13px;font-weight:600;color:var(--ink2);
+  flex:1;min-width:80px;
+}
+.admin-stat strong{display:block;font-size:22px;font-weight:800;color:var(--g);margin-bottom:2px}
+
+/* ── TABLE ──────────────────────────────────────────── */
+.admin-tbl-wrap{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--bd)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{
+  background:var(--g);color:#fff;padding:10px 8px;
+  text-align:center;font-size:12px;font-weight:700;letter-spacing:.2px;
+  position:sticky;top:0;white-space:nowrap;
+}
+th:first-child{text-align:left;padding-left:12px}
+td{padding:11px 8px;border-bottom:1px solid var(--bd2);text-align:center;color:var(--ink2)}
+td:first-child{text-align:left;font-size:13px;font-weight:600;padding-left:12px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--gxl)}
+/* ===== Panel analítico (pestañas Análisis / Cierre) ===== */
+.admin-tabs{display:flex;gap:2px;border-bottom:2px solid var(--bd);margin:0 0 16px}
+.admin-tab{
+  flex:1;padding:11px 8px;min-height:var(--tap);
+  background:none;border:none;border-bottom:3px solid transparent;
+  font-family:inherit;font-size:13px;font-weight:600;color:var(--mu);cursor:pointer;
+  transition:color var(--tf) var(--eo),border-color var(--tf) var(--eo);
+}
+.admin-tab:hover{color:var(--ink2)}
+.admin-tab.activa{color:var(--g);border-bottom-color:var(--g);font-weight:800}
+.anl-fila{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:12px 14px;border:1px solid var(--bd);border-radius:var(--r2);
+  margin-bottom:8px;cursor:pointer;background:var(--wh);box-shadow:var(--s0);
+  width:100%;text-align:left;font-family:inherit;min-height:var(--tap);
+  transition:box-shadow var(--tf) var(--eo),border-color var(--tf) var(--eo);
+}
+/* Nombre del promotor dentro de la tabla: era un <td onclick>, sin foco.
+   Ahora es un botón que ocupa la celda. */
+.celda-editar{
+  background:none;border:none;font-family:inherit;font-size:inherit;
+  font-weight:inherit;color:inherit;text-align:left;cursor:pointer;
+  padding:2px 0;min-height:36px;width:100%;
+}
+.celda-editar:hover{text-decoration:underline}
+.anl-fila:hover{box-shadow:var(--s1);border-color:var(--ol)}
+.anl-fila.critica{border-left:3px solid var(--ro)}
+.anl-nombre{font-size:14px;font-weight:700;color:var(--ink);line-height:1.3}
+.anl-unidad{font-size:12px;color:var(--mu);line-height:1.3}
+.anl-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+.anl-chip{font-size:12px;font-weight:600;padding:4px 10px;border-radius:var(--rf);white-space:nowrap}
+.anl-chip.alta{background:var(--ro-bg);color:var(--ro)}
+.anl-chip.baja{background:var(--am-bg);color:var(--am)}
+.anl-chip.info{background:var(--op);color:var(--o-tx)}
+.anl-delta{font-size:12px;font-weight:700;color:var(--ro)}
+.anl-spark{display:flex;align-items:flex-end;gap:2px;height:22px}
+.anl-spark i{display:block;width:5px;background:var(--o-gr);border-radius:1px;min-height:2px}
+.anl-spark i.ult{background:var(--g)}
+.anl-muertos{
+  margin-top:18px;padding:12px 14px;border-left:3px solid var(--mu);
+  background:var(--pa);border-radius:0 var(--r1) var(--r1) 0;font-size:12px;line-height:1.6;color:var(--ink2);
+}
+.anl-muertos strong{display:block;color:var(--ink2);margin-bottom:4px;font-size:13px}
+.anl-det{
+  border:1px solid var(--ol);border-radius:var(--r2);padding:16px;
+  margin-bottom:14px;background:var(--wh);box-shadow:var(--s2);
+}
+.anl-det h3{font-size:15px;color:var(--g);margin:0 0 2px}
+.anl-vacio{font-size:13px;color:var(--ink2);padding:16px 0;text-align:center}
+.ofi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:8px}
+.ofi-grid label{font-size:12px;color:var(--ink2);display:flex;flex-direction:column;gap:2px;font-weight:600}
+.ofi-grid input{padding:8px;font-size:16px;min-height:40px;border:1px solid var(--bd);border-radius:var(--r1);width:100%}
+/* Cada punto lleva además una letra (V/A/R/—) para no depender del color. */
+.smf-dot{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:16px;height:16px;padding:0 4px;border-radius:var(--rf);
+  vertical-align:middle;margin-left:5px;
+  font-size:11px;font-weight:800;color:#fff;letter-spacing:0;
+}
+.smf-dot.verde{background:var(--ve-fill)}
+.smf-dot.amarillo{background:var(--am-fill)}
+.smf-dot.rojo{background:var(--ro-fill)}
+.smf-dot.gris{background:var(--gris-fill)}
+
+/* ── TOAST ──────────────────────────────────────────── */
+/* Toca para descartar. Los errores ya no se auto-descartan: desaparecer solo
+   tras 3.5 s es "elemento con temporizador" y se pierde justo cuando alguien
+   necesita más tiempo para leerlo. HIG Accesibilidad > Cognitivo. */
+#toast{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(24px + env(safe-area-inset-bottom));
+  background:var(--ink2);color:#fff;padding:14px 20px;border-radius:var(--r3);
+  font-size:14px;font-weight:600;display:none;z-index:500;
+  max-width:min(92%,520px);text-align:left;box-shadow:var(--s3);letter-spacing:.1px;
+  cursor:pointer;border:1px solid rgba(255,255,255,.14);
+  display:none;align-items:center;gap:12px;line-height:1.45;
+}
+#toast.visible{display:flex}
+#toast.err{background:#7F1524;border-color:rgba(255,255,255,.22)}
+#toast .t-x{
+  flex-shrink:0;font-size:18px;line-height:1;opacity:.75;font-weight:400;
+  background:none;border:none;color:inherit;cursor:pointer;padding:4px 2px;
+}
+#toast .t-x:hover{opacity:1}
+
+/* ── ADMIN LINK ─────────────────────────────────────── */
+.admin-link{text-align:center;padding:32px 14px 16px}
+.admin-link a,.admin-link button{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  color:var(--gd);text-decoration:none;font-size:13px;font-weight:700;
+  letter-spacing:.1px;font-family:inherit;cursor:pointer;
+  padding:10px 22px;min-height:var(--tap);
+  border:1.5px solid rgba(138,30,50,.35);
+  border-radius:var(--rf);background:var(--wh);box-shadow:var(--s0);
+  transition:background var(--tf) var(--eo),border-color var(--tf) var(--eo),box-shadow var(--tf) var(--eo);
+}
+.admin-link a:hover,.admin-link button:hover{background:var(--gxl);border-color:var(--g);box-shadow:var(--s1)}
+
+/* ── MODAL EDIT ─────────────────────────────────────── */
+.modal-sheet{
+  background:var(--wh);border-radius:var(--r4);padding:28px;
+  margin:80px auto auto;width:90%;max-width:400px;box-shadow:var(--s4);
+}
+.modal-hdr{display:flex;align-items:center;margin-bottom:20px}
+.modal-hdr h3{flex:1;font-size:16px;font-weight:800;color:var(--g);letter-spacing:-.2px}
+.modal-sub{font-size:13px;color:var(--mu);margin-bottom:14px;font-weight:500}
+
+/* ── CONFIRMACIÓN ───────────────────────────────────── */
+.cf-sheet{margin:auto;max-width:440px}
+.admin-overlay:has(.cf-sheet){align-items:center;justify-content:center;padding:16px}
+.cf-titulo{font-size:19px;font-weight:800;color:var(--ink);margin-bottom:10px;letter-spacing:-.2px}
+.cf-cuerpo{font-size:15px;color:var(--ink2);line-height:1.65}
+.cf-cuerpo ul{margin:12px 0 0;padding-left:20px}
+.cf-cuerpo li{margin-bottom:5px}
+.cf-cuerpo .cf-dato{
+  display:flex;justify-content:space-between;gap:12px;
+  padding:8px 12px;background:var(--pa);border:1px solid var(--bd2);
+  border-radius:var(--r1);margin-top:6px;font-size:14px;
+}
+.cf-cuerpo .cf-dato b{color:var(--gd);font-weight:800}
+.cf-aviso{
+  margin-top:14px;padding:12px 14px;border-left:3px solid var(--am);
+  background:var(--am-bg);color:var(--am);border-radius:0 var(--r1) var(--r1) 0;
+  font-size:14px;font-weight:600;line-height:1.55;
+}
+.cf-acciones{display:flex;gap:10px;margin-top:22px}
+.cf-acciones .btn,.cf-acciones .btn-sec{margin-top:0;flex:1}
+.btn.cf-peligro{background:linear-gradient(135deg,#7F1524,var(--ro));box-shadow:0 4px 16px rgba(155,28,46,.32)}
+
+/* ── FORM DISCLAIMER ────────────────────────────────── */
+.form-disclaimer{
+  text-align:center;font-size:13px;color:var(--ink2);
+  padding:4px 14px 0;line-height:1.7;font-weight:500;
+}
+
+/* ── HISTORIAL ──────────────────────────────────────── */
+.hist-wrap{padding:16px 14px}
+.hist-card{
+  background:var(--wh);border-radius:var(--r3);border:1px solid var(--bd2);
+  box-shadow:var(--s0);padding:14px 16px;margin-bottom:10px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.hist-mes{flex:1;min-width:150px}
+.hm-per{font-size:15px;font-weight:800;color:var(--gd)}
+.hm-folio{font-family:ui-monospace,'SF Mono','Fira Code',monospace;font-size:12px;color:var(--ink2);margin-top:2px;letter-spacing:.3px}
+.hm-fecha{font-size:12px;color:var(--mu);margin-top:2px;font-weight:500}
+.hist-est{font-size:12px;font-weight:800;letter-spacing:.2px;padding:5px 12px;border-radius:var(--rf)}
+.hist-est.capturado{background:var(--am-bg);color:var(--am)}
+.hist-est.validado{background:var(--ve-bg);color:var(--ve)}
+.hist-vacio{color:var(--ink2);font-size:14px;font-weight:500;padding-top:4px}
+/* Texto de ayuda: es contenido instructivo, no un estado vacío.
+   Antes reusaba .hist-vacio y heredaba su color apagado. */
+.hint{color:var(--ink2);font-size:14px;font-weight:500;line-height:1.65;padding-top:4px}
+.sev{font-size:11px;font-weight:800;letter-spacing:.2px;padding:4px 10px;border-radius:var(--rf);white-space:nowrap}
+.sev-alta{background:var(--ro-bg);color:var(--ro)}
+.sev-media{background:var(--am-bg);color:var(--am)}
+.sev-baja{background:var(--bd2);color:var(--sev-tx)}   /* antes --mu sobre --bd2 = 4.11:1 */
+.sev-informativa{background:var(--info-bg);color:var(--info)}
+.btn-acuse{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 18px;min-height:var(--tap);
+  border:1.5px solid rgba(138,30,50,.35);border-radius:var(--rf);
+  background:var(--gxl);color:var(--gd);font-size:13px;font-weight:700;
+  letter-spacing:.1px;cursor:pointer;font-family:inherit;
+  transition:background var(--tf) var(--eo),color var(--tf) var(--eo),border-color var(--tf) var(--eo);
+}
+.btn-acuse:hover{background:var(--g);color:#fff;border-color:var(--g)}
+
+/* ── ACUSE (documento institucional) ────────────────── */
+.acuse-overlay{
+  position:fixed;inset:0;background:rgba(10,6,4,.72);
+  z-index:400;overflow-y:auto;padding:14px 8px 48px;
+}
+.acuse-toolbar{max-width:820px;margin:0 auto 10px;display:flex;gap:8px;justify-content:flex-end}
+.acuse-sheet{
+  max-width:820px;margin:0 auto;background:#fff;color:#111;
+  padding:26px 30px;font-family:Calibri,'Segoe UI',Arial,sans-serif;
+  font-size:12px;line-height:1.35;box-shadow:var(--s4);border-radius:4px;
+}
+.ac-head{display:flex;justify-content:space-between;gap:16px;border-bottom:2.5px solid #8A1E32;padding-bottom:10px}
+.ac-inst div{font-size:9.5px;font-weight:600;color:#333;line-height:1.45}
+.ac-inst .ac-tit{font-family:Cambria,Georgia,serif;font-size:13.5px;font-weight:800;color:#8A1E32;margin-top:6px;line-height:1.25}
+.ac-inst .ac-sub{font-size:8.5px;color:#6B7280;letter-spacing:.7px;text-transform:uppercase;margin-top:3px;font-weight:700}
+.ac-folio-box{
+  border:1.5px solid #8A1E32;border-radius:5px;padding:8px 12px;
+  text-align:center;align-self:flex-start;min-width:168px;flex-shrink:0;
+}
+.ac-fol-lbl{font-size:8.5px;font-weight:800;letter-spacing:1px;color:#8A1E32}
+.ac-fol-val{font-family:'Courier New',monospace;font-size:11.5px;font-weight:700;color:#111;margin:3px 0}
+.ac-fol-fecha{font-size:8.5px;color:#555}
+.ac-ident{width:100%;border-collapse:collapse;margin-top:10px}
+.ac-ident td{border:1px solid #999;padding:4px 8px;font-size:10.5px;position:static}
+.ac-ident .ac-k{background:#F3EDE4;font-weight:700;color:#5a4632;width:16%;text-transform:uppercase;font-size:8.5px;letter-spacing:.4px}
+.ac-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;align-items:start}
+.ac-tbl{width:100%;border-collapse:collapse}
+.ac-tbl th{
+  background:#8A1E32;color:#fff;padding:5px 8px;font-size:9px;
+  letter-spacing:.6px;text-transform:uppercase;text-align:left;position:static;
+}
+.ac-tbl th:last-child{text-align:center;width:52px}
+.ac-tbl td{border:1px solid #999;padding:3.5px 8px;font-size:10.5px;color:#111;text-align:left}
+.ac-tbl td.ac-n{text-align:center;font-weight:700;width:52px}
+.ac-tbl td.ac-m{text-align:center;font-size:9px;color:#666;width:52px}
+.ac-tbl tr.ac-total td{background:#F3EDE4;font-weight:800}
+.ac-txt{margin-top:12px;border:1px solid #999}
+.ac-txt .ac-txt-tit{background:#B78D55;color:#fff;padding:4px 8px;font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase}
+.ac-txt .ac-txt-body{padding:6px 8px;font-size:10.5px;min-height:26px;white-space:pre-wrap}
+.ac-firmas{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:14px;margin-top:28px}
+.ac-firma{border:1px solid #999;border-radius:4px;min-height:118px;padding:10px;display:flex;flex-direction:column;justify-content:flex-end;text-align:center}
+.ac-f-linea{border-top:1px solid #444;margin:0 8px 5px}
+.ac-f-nom{font-size:10px;font-weight:700}
+.ac-f-cargo{font-size:8.5px;color:#555;line-height:1.4}
+.ac-f-rol{font-size:9px;font-weight:800;letter-spacing:1px;color:#8A1E32;margin-top:6px}
+.ac-sello{justify-content:center;color:#6E7480;font-size:10px;font-weight:700;letter-spacing:2px}
+.ac-legend{
+  margin-top:16px;border-top:1px solid #ccc;padding-top:8px;
+  font-size:8.5px;color:#555;line-height:1.55;
+}
+@media(max-width:640px){.ac-cols{grid-template-columns:1fr}.ac-firmas{grid-template-columns:1fr}}
+
+/* ── PRINT (solo el acuse) ──────────────────────────── */
+@media print{
+  body.print-acuse{padding:0;background:#fff}
+  body.print-acuse>*{display:none!important}
+  body.print-acuse .acuse-overlay{
+    display:block!important;position:static;overflow:visible;
+    background:none;padding:0;
+  }
+  body.print-acuse .acuse-toolbar{display:none!important}
+  body.print-acuse .acuse-sheet{
+    box-shadow:none;max-width:none;margin:0;padding:0;border-radius:0;
+    font-size:11px;
+  }
+  body.print-acuse .ac-cols{grid-template-columns:1fr 1fr}
+  body.print-acuse .ac-firmas{grid-template-columns:1fr 1.2fr 1fr}
+  body.print-acuse .ac-tbl th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:letter;margin:13mm 12mm}
+}
+
+/* ── RESPONSIVE ─────────────────────────────────────── */
+@media(max-width:400px){
+  .hdr{height:52px}
+  .admin-stat strong{font-size:18px}
+  .tab-btn{font-size:12px;padding:12px 4px}
+}
+/* En pantalla ancha el formulario no debe estirarse a todo lo largo:
+   líneas de 100+ caracteres cansan y descolocan la relación etiqueta-campo. */
+@media(min-width:760px){
+  .form-wrap,.avance-wrap,.hist-wrap{max-width:680px;margin:0 auto}
+  .periodo-bar,.identity,.tabs{max-width:680px;margin-left:auto;margin-right:auto}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <div class="htit">
+      <div class="h1">SSOP · Productividad Mensual</div>
+      <div class="h2">JS XIX Texcoco &nbsp;·&nbsp; ISEM</div>
+    </div>
+    <div class="sync" role="status" aria-live="polite">
+      <span id="syncDot" class="dot spin" aria-hidden="true">◐</span>
+      <span id="syncTxt">Cargando…</span>
+    </div>
+  </div>
+</header>
+
+<!-- SETUP -->
+<div id="vSetup" class="oculto">
+  <div class="setup-wrap">
+    <div class="card">
+      <div class="card-title">Configurar dispositivo</div>
+      <div class="card-sub">Solo necesitas hacerlo una vez.</div>
+      <label for="cfgPromotor">Tu nombre <span aria-hidden="true" style="color:var(--ro)">*</span><span class="sr-only">(obligatorio)</span></label>
+      <select id="cfgPromotor" required autocomplete="off"><option value="">— Selecciona —</option></select>
+      <button type="button" class="btn" onclick="guardarCfg()">Guardar y continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="vApp" class="oculto">
+  <div class="identity">
+    <div>
+      <div class="id-nombre" id="idNombre">—</div>
+      <div class="id-info" id="idInfo"></div>
+    </div>
+    <button type="button" class="lnk" onclick="abrirSetup()">Cambiar<span class="sr-only"> de promotor</span></button>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Secciones del capturador">
+    <button type="button" id="tabCapt" class="tab-btn activa" role="tab" aria-selected="true" aria-controls="vCapt" tabindex="0" onclick="verTab('Capt')">Capturar</button>
+    <button type="button" id="tabAvance" class="tab-btn" role="tab" aria-selected="false" aria-controls="vAvance" tabindex="-1" onclick="verTab('Avance')">Mi avance</button>
+    <button type="button" id="tabHist" class="tab-btn" role="tab" aria-selected="false" aria-controls="vHist" tabindex="-1" onclick="verTab('Hist')">Historial</button>
+    <button type="button" id="tabPlan" class="tab-btn" role="tab" aria-selected="false" aria-controls="vPlan" tabindex="-1" onclick="verTab('Plan')">Plan</button>
+  </div>
+
+  <!-- TAB Captura -->
+  <div id="vCapt" role="tabpanel" aria-labelledby="tabCapt" tabindex="0">
+    <div class="periodo-bar">
+      <span class="periodo-lbl">Período:</span>
+      <label class="sr-only" for="selPeriodo">Período que estás capturando</label>
+      <select id="selPeriodo" class="periodo-sel oculto" onchange="cambiarPeriodo(this.value)"></select>
+      <!-- Cuando solo hay un período capturable se muestra como texto, no como
+           un desplegable de una sola opción. -->
+      <strong id="periodoFijo" class="periodo-fijo oculto">—</strong>
+      <span id="periodoEst" class="badge abierto" role="status">Abierto</span>
+    </div>
+
+    <!-- Ya envió -->
+    <div id="vEnviado" class="oculto">
+      <div class="enviado-card">
+        <h2 class="vc-titulo">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Reporte enviado
+        </h2>
+        <div class="vc-folio">
+          <span id="vEnviadoFolio">—</span>
+          <button type="button" class="vc-copiar" onclick="copiarFolio()">Copiar folio</button>
+        </div>
+        <p class="vc-nota">Si necesitas corregir algo, contacta al coordinador.</p>
+        <button type="button" class="btn-acuse" style="margin-bottom:14px" onclick="verAcuse(REPORTE)">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Ver / imprimir acuse
+        </button>
+        <div class="resumen-grid" id="vEnviadoGrid"></div>
+      </div>
+    </div>
+
+    <!-- Período cerrado -->
+    <div id="vCerrado" class="oculto">
+      <div class="cerrado-card">
+        <div class="cerrado-ico">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3>Período cerrado</h3>
+        <p>La recepción de productividad está cerrada. Contacta al coordinador si necesitas enviar tu reporte.</p>
+      </div>
+    </div>
+
+    <!-- Formulario -->
+    <div id="vForm">
+      <div class="form-wrap">
+
+        <!-- S1 -->
+        <div class="seccion" id="sec1">
+          <button type="button" class="sec-head abierta" data-s="1" id="head1" aria-expanded="true" aria-controls="body1" onclick="toggleSec(1)">
+            <span class="sec-num">1</span>
+            <span class="sec-tit">Trabajo de Campo y Referencias</span>
+            <span class="sec-ico" id="ico1">
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </button>
+          <div class="sec-body vis" id="body1" role="region" aria-labelledby="head1">
+            <div class="campo">
+              <label for="tvf">Tarjetas de Visita Familiar (TVF)</label>
+              <div class="campo-row">
+                <input type="number" inputmode="numeric" id="tvf" min="0" placeholder="0" oninput="guardaBorrador()">
+                <span class="meta-badge">Meta: 70/mes</span>
+              </div>
+            </div>
+            <div class="campo">
+              <label for="cartilla">Acciones en Cartilla Nacional de Salud</label>
+              <input type="number" inputmode="numeric" id="cartilla" min="0" placeholder="0" oninput="guardaBorrador()">
+            </div>
+            <div class="campo">
+              <label for="ref_total">Total de pacientes referidos a la unidad</label>
+              <div class="refs-total-row">
+                <input type="number" inputmode="numeric" id="ref_total" min="0" placeholder="0 (suma del desglose)" readonly style="background:var(--pa);color:var(--gd);font-weight:700">
+                <button type="button" class="ref-toggle" id="refToggle" onclick="toggleDesglose()">
+                  <svg aria-hidden="true" id="refArrow" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+                  Ver desglose
+                </button>
+              </div>
+            </div>
+            <div id="desglose" class="oculto">
+              <div class="refs-grid">
+                <div class="ref-item"><label for="ref_iras">Menores 5 a. (IRAS)</label><input type="number" inputmode="numeric" id="ref_iras" min="0" placeholder="0" oninput="actualizarRefs()"></div>
+                <div class="ref-item"><label for="ref_edas">Menores 5 a. (EDAS)</label><input type="number" inputmode="numeric" id="ref_edas" min="0" placeholder="0" oninput="actualizarRefs()"></div>
+                <div class="ref-item"><label for="ref_edi">EDI / ET / Crec. y Des.</label><input type="number" inputmode="numeric" id="ref_edi" min="0" placeholder="0" oninput="actualizarRefs()"></div>
+                <div class="ref-item"><label for="ref_embarazadas">Embarazadas / puérperas</label><input type="number" inputmode="numeric" id="ref_embarazadas" min="0" placeholder="0" oninput="actualizarRefs()"></div>
+                <div class="ref-item"><label for="ref_citologia">Citología vaginal</label><input type="number" inputmode="numeric" id="ref_citologia" min="0" placeholder="0" oninput="actualizarRefs()"></div>
+                <div class="ref-item"><label for="ref_diabetes">Sospecha diabetes</label><input type="number" inputmode="numeric" id="ref_diabetes" min="0" placeholder="0" oninput="actualizarRefs()"></div>
+                <div class="ref-item"><label for="ref_hipertensos">Hipertensos</label><input type="number" inputmode="numeric" id="ref_hipertensos" min="0" placeholder="0" oninput="actualizarRefs()"></div>
+                <div class="ref-item"><label for="ref_tosedores">Tosedores crónicos</label><input type="number" inputmode="numeric" id="ref_tosedores" min="0" placeholder="0" oninput="actualizarRefs()"></div>
+                <div class="ref-item"><label for="ref_otros">Otros motivos (TVF)</label><input type="number" inputmode="numeric" id="ref_otros" min="0" placeholder="0" oninput="actualizarRefs()"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- S2 -->
+        <div class="seccion" id="sec2">
+          <button type="button" class="sec-head" data-s="2" id="head2" aria-expanded="false" aria-controls="body2" onclick="toggleSec(2)">
+            <span class="sec-num">2</span>
+            <span class="sec-tit">Promoción de la Salud</span>
+            <span class="sec-ico" id="ico2">
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </button>
+          <div class="sec-body" id="body2" role="region" aria-labelledby="head2">
+            <div class="campo">
+              <label for="talleres_ps">Talleres de Promoción de la Salud</label>
+              <div class="campo-row">
+                <input type="number" inputmode="numeric" id="talleres_ps" min="0" placeholder="0" oninput="guardaBorrador()">
+                <span class="meta-badge">Meta: 18/mes</span>
+              </div>
+            </div>
+            <div class="campo">
+              <label for="talleres_adicciones">Sesiones / Talleres Prevención de Adicciones</label>
+              <div class="campo-row">
+                <input type="number" inputmode="numeric" id="talleres_adicciones" min="0" placeholder="0" oninput="guardaBorrador()">
+                <span class="meta-badge">Meta: 2/mes</span>
+              </div>
+            </div>
+            <div class="campo">
+              <label for="periodicos_murales">Periódicos murales elaborados</label>
+              <div class="campo-row">
+                <input type="number" inputmode="numeric" id="periodicos_murales" min="0" placeholder="0" oninput="guardaBorrador()">
+                <span class="meta-badge">Meta: 1/mes</span>
+              </div>
+            </div>
+            <div class="campo">
+              <label for="inpMural">Evidencia fotográfica (periódico mural)</label>
+              <div class="upload-area">
+                <label class="upload-btn" for="inpMural">
+                  <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                  Seleccionar foto / cámara
+                </label>
+                <input type="file" id="inpMural" accept="image/*" onchange="cargarImagen(this,'prevMural')">
+                <div id="prevMural" class="upload-preview oculto"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- S3 -->
+        <div class="seccion" id="sec3">
+          <button type="button" class="sec-head" data-s="3" id="head3" aria-expanded="false" aria-controls="body3" onclick="toggleSec(3)">
+            <span class="sec-num">3</span>
+            <span class="sec-tit">Certificaciones y Entornos</span>
+            <span class="sec-ico" id="ico3">
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </button>
+          <div class="sec-body" id="body3" role="region" aria-labelledby="head3">
+            <div class="campo">
+              <label for="cert_comunidades_n">Acciones para Certificación de Comunidades Saludables</label>
+              <input type="number" inputmode="numeric" id="cert_comunidades_n" min="0" placeholder="0" oninput="guardaBorrador()">
+            </div>
+            <div class="campo">
+              <label for="cert_comunidades_desc">Descripción de acciones realizadas</label>
+              <textarea id="cert_comunidades_desc" placeholder="Ej: diagnóstico comunitario, taller de huertos…" oninput="guardaBorrador()"></textarea>
+            </div>
+            <div class="campo">
+              <label for="cert_escuelas">Acciones para Certificación de Escuelas Saludables</label>
+              <input type="number" inputmode="numeric" id="cert_escuelas" min="0" placeholder="0" oninput="guardaBorrador()">
+            </div>
+            <div class="campo">
+              <label for="entornos_laborales">Entornos Laborales Saludables intervenidos / certificados</label>
+              <div class="campo-row">
+                <input type="number" inputmode="numeric" id="entornos_laborales" min="0" placeholder="0" oninput="guardaBorrador()">
+                <span class="meta-badge">Meta: 3/trim</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- S4 -->
+        <div class="seccion" id="sec4">
+          <button type="button" class="sec-head" data-s="4" id="head4" aria-expanded="false" aria-controls="body4" onclick="toggleSec(4)">
+            <span class="sec-num">4</span>
+            <span class="sec-tit">Logística y Operatividad</span>
+            <span class="sec-ico" id="ico4">
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </button>
+          <div class="sec-body" id="body4" role="region" aria-labelledby="head4">
+            <div class="campo">
+              <label for="alianzas">Alianzas Estratégicas establecidas</label>
+              <div class="campo-row">
+                <input type="number" inputmode="numeric" id="alianzas" min="0" placeholder="0" oninput="guardaBorrador()">
+                <span class="meta-badge">Meta: 1/trim</span>
+              </div>
+            </div>
+            <div class="campo">
+              <label for="apoyo_logistico">Apoyo en filtros / ferias / unidades móviles</label>
+              <textarea id="apoyo_logistico" placeholder="Describe brevemente el apoyo brindado…" oninput="guardaBorrador()"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- S5 -->
+        <div class="seccion" id="sec5">
+          <button type="button" class="sec-head" data-s="5" id="head5" aria-expanded="false" aria-controls="body5" onclick="toggleSec(5)">
+            <span class="sec-num">5</span>
+            <span class="sec-tit">Planeación Mensual</span>
+            <span class="sec-ico" id="ico5">
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </button>
+          <div class="sec-body" id="body5" role="region" aria-labelledby="head5">
+            <div class="campo">
+              <label for="cronogramas">Número de cronogramas entregados</label>
+              <div class="campo-row">
+                <input type="number" inputmode="numeric" id="cronogramas" min="0" placeholder="0" oninput="guardaBorrador()">
+                <span class="meta-badge">Meta: 4/mes</span>
+              </div>
+            </div>
+            <div class="campo">
+              <label for="inpCron">Cronogramas (PDF o imagen)</label>
+              <div class="upload-area">
+                <label class="upload-btn" for="inpCron">
+                  <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Seleccionar archivo
+                </label>
+                <input type="file" id="inpCron" accept="application/pdf,image/*" onchange="cargarArchivo(this,'prevCron')">
+                <div id="prevCron" class="upload-preview oculto"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="btn-enviar" id="btnEnviar" onclick="enviarReporte()">
+          Enviar Reporte del Mes
+        </button>
+        <p class="form-disclaimer">
+          Verifica tus datos antes de enviar. El reporte solo se puede enviar una vez por mes.
+        </p>
+
+      </div>
+    </div><!-- /vForm -->
+  </div><!-- /vCapt -->
+
+  <!-- TAB Avance -->
+  <div id="vAvance" class="oculto">
+    <div class="avance-wrap">
+      <div class="avance-tit">Mi avance &mdash; <span id="avancePeriodo"></span></div>
+      <div id="avanceContenido"></div>
+    </div>
+  </div>
+
+  <!-- TAB Historial -->
+  <div id="vHist" class="oculto">
+    <div class="hist-wrap">
+      <div class="avance-tit">Mis reportes enviados</div>
+      <p class="hint" style="padding-bottom:10px">
+        Descarga el acuse de cada mes, imprímelo y preséntalo con firma, cargo y sello de tu
+        coordinador(a), administrador(a) o jefe(a) de enfermería para la validación de tu productividad en SIS.
+      </p>
+      <div id="histContenido"></div>
+    </div>
+  </div>
+
+  <!-- TAB Plan (cronograma = el "planeado" del cotejo de tres vías) -->
+  <div id="vPlan" class="oculto">
+    <div class="hist-wrap">
+      <div class="avance-tit">Plan de trabajo &mdash; <span id="planPeriodo"></span></div>
+      <p class="hint" style="padding-bottom:10px">
+        Registra por adelantado tus actividades. La coordinación coteja este plan
+        contra lo ejecutado y su evidencia (cotejo de tres vías).
+      </p>
+      <div class="card" style="max-width:none;padding:20px 18px">
+        <label style="margin-top:0" for="planFecha">Fecha planeada</label>
+        <input type="date" id="planFecha">
+        <label for="planActividad">Actividad</label>
+        <select id="planActividad"><option value="">— Selecciona —</option></select>
+        <label for="planLugar">Lugar / comunidad</label>
+        <input type="text" id="planLugar" placeholder="Ej. Esc. Prim. Benito Juárez, San Miguel…">
+        <label for="planNotas">Notas (opcional)</label>
+        <input type="text" id="planNotas" placeholder="Detalle breve">
+        <button type="button" class="btn" onclick="agregarActividadPlan()">Agregar al plan</button>
+      </div>
+      <div id="planPendientes" style="margin-top:12px"></div>
+      <button type="button" class="btn-enviar oculto" id="btnEnviarPlan" style="width:100%;margin:8px 0" onclick="enviarPlan()">Enviar plan</button>
+      <div class="avance-tit" style="margin-top:20px">Actividades registradas</div>
+      <div id="planContenido"></div>
+    </div>
+  </div>
+</div><!-- /vApp -->
+
+<div class="admin-link">
+  <button type="button" onclick="abrirAdmin()">
+    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    Acceso Coordinación / Admin
+  </button>
+</div>
+
+<!-- PANEL ADMIN -->
+<div id="vAdmin" class="admin-overlay oculto" role="dialog" aria-modal="true" aria-labelledby="adminTitulo">
+  <div class="admin-panel">
+    <div class="admin-hdr">
+      <div class="admin-hdr-icon">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </div>
+      <h2 id="adminTitulo">Panel de Administrador</h2>
+      <button type="button" class="icon-btn" onclick="cerrarAdmin()" aria-label="Cerrar el panel de administrador">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div id="adminLogin">
+      <div class="admin-login">
+        <h3>Acceso Administrador</h3>
+        <label for="adminPass">Contraseña</label>
+        <input type="password" id="adminPass" autocomplete="current-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')loginAdmin()">
+        <button type="button" class="btn" onclick="loginAdmin()">Entrar</button>
+      </div>
+    </div>
+
+    <div id="adminDash" class="oculto">
+      <div class="periodo-sel-wrap">
+        <label for="adminPeriodo">Período:</label>
+        <input type="month" id="adminPeriodo" onchange="cargarAdmin()">
+      </div>
+
+      <div class="admin-tabs" role="tablist" aria-label="Vistas del panel">
+        <button type="button" class="admin-tab activa" role="tab" data-tab="recepcion" aria-selected="true" tabindex="0" onclick="cambiarTabAdmin('recepcion')">Recepci&oacute;n</button>
+        <button type="button" class="admin-tab" role="tab" data-tab="analisis" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('analisis')">An&aacute;lisis</button>
+        <button type="button" class="admin-tab" role="tab" data-tab="cierre" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('cierre')">Cierre y env&iacute;o</button>
+        <button type="button" class="admin-tab" role="tab" data-tab="historico" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('historico')">Hist&oacute;rico</button>
+      </div>
+
+      <div id="tabRecepcion" class="admin-tab-panel">
+      <div id="adminEstadoBadge" class="admin-estado abierto" role="status">Recepción abierta</div>
+      <div class="admin-ctl">
+        <button type="button" class="btn-ctl cerrar" id="btnCerrar" onclick="setPeriodo('cerrado')">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Cerrar recepción
+        </button>
+        <button type="button" class="btn-ctl abrir" id="btnAbrir" onclick="setPeriodo('abierto')">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+          Abrir recepción
+        </button>
+        <button type="button" class="btn-ctl reload" onclick="cargarAdmin()">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Actualizar
+        </button>
+      </div>
+      <div class="admin-stats" id="adminStats"></div>
+      <div class="admin-tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="min-width:130px">Promotor</th>
+              <th>Unidad</th><th>TVF</th><th>T.PS</th>
+              <th>Adics</th><th>Mural</th><th>Cron</th><th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="adminTbody"></tbody>
+        </table>
+      </div>
+
+      <!-- FASE 2: cotejo de tres vías -->
+      <div class="avance-tit" style="margin-top:26px">Alertas &middot; cotejo de tres v&iacute;as</div>
+      <div class="admin-ctl">
+        <button type="button" class="btn-ctl accion" onclick="ejecutarCotejo(event)">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Ejecutar cotejo
+        </button>
+        <button type="button" class="btn-ctl reload" onclick="cargarAlertas()">Actualizar alertas</button>
+      </div>
+      <div class="admin-stats" id="alertaStats"></div>
+      <div class="admin-tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="min-width:110px">Promotor</th>
+              <th>Detalle</th><th>Severidad</th><th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="alertaTbody"></tbody>
+        </table>
+      </div>
+      </div><!-- /tabRecepcion -->
+
+      <div id="tabAnalisis" class="admin-tab-panel oculto"></div>
+      <div id="tabCierre" class="admin-tab-panel oculto"></div>
+      <div id="tabHistorico" class="admin-tab-panel oculto"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PROMOTOR -->
+<div id="modalEdit" class="admin-overlay oculto" role="dialog" aria-modal="true" aria-labelledby="editTitulo" onclick="if(event.target===this)cerrarEdit()">
+  <div class="modal-sheet">
+    <div class="modal-hdr">
+      <h3 id="editTitulo">Editar Promotor</h3>
+      <button type="button" class="icon-btn" onclick="cerrarEdit()" aria-label="Cerrar y descartar los cambios">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-sub" id="editNombre"></div>
+
+    <div id="editBase" style="padding:10px 12px;background:var(--pa);border-left:3px solid var(--o);
+      border-radius:0 var(--r1) var(--r1) 0;font-size:13px;line-height:1.6;color:var(--ink2);margin-bottom:16px"></div>
+
+    <label for="editUnidad">Unidad operativa (rota cada trimestre)</label>
+    <input type="text" id="editUnidad" placeholder="Nombre de la unidad donde captura">
+    <label style="margin-top:12px" for="editClues">CLUES operativa</label>
+    <input type="text" id="editClues" placeholder="MCIMB000000">
+    <label style="margin-top:12px" for="editVigente">Vigente desde</label>
+    <input type="month" id="editVigente">
+    <div style="margin-top:18px;display:flex;align-items:center;gap:12px">
+      <span style="font-size:13px;font-weight:700;color:var(--gd)">Estado:</span>
+      <button type="button" id="editActivoBtn" onclick="toggleEditActivo()" style="padding:7px 18px;min-height:40px;border:none;border-radius:var(--rf);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit"></button>
+    </div>
+    <p style="font-size:13px;color:var(--ink2);margin-top:8px;line-height:1.6">Inactivo = no aparece en el men&uacute; de captura</p>
+    <div id="editRotaciones" style="margin-top:14px;font-size:13px;color:var(--ink2)"></div>
+    <button type="button" class="btn" style="margin-top:20px" onclick="guardarEditPromotor()">Guardar cambios</button>
+  </div>
+</div>
+
+<!-- ACUSE INSTITUCIONAL (vista + impresión) -->
+<div id="vAcuse" class="acuse-overlay oculto" role="dialog" aria-modal="true" aria-label="Acuse institucional del reporte mensual">
+  <div class="acuse-toolbar">
+    <button type="button" class="btn-ctl accion" onclick="window.print()">
+      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Imprimir / Guardar PDF
+    </button>
+    <button type="button" class="btn-ctl reload" onclick="cerrarAcuse()">Cerrar</button>
+  </div>
+  <div class="acuse-sheet" id="acuseSheet"></div>
+</div>
+
+<!-- CONFIRMACIÓN (sustituye a confirm()/prompt() del navegador) -->
+<div id="modalConfirm" class="admin-overlay oculto" role="dialog" aria-modal="true" aria-labelledby="cfTitulo">
+  <div class="modal-sheet cf-sheet">
+    <h3 id="cfTitulo" class="cf-titulo">¿Confirmas?</h3>
+    <div id="cfCuerpo" class="cf-cuerpo"></div>
+    <div id="cfCampoWrap" class="oculto">
+      <label id="cfCampoLbl" for="cfCampo">Motivo</label>
+      <textarea id="cfCampo" rows="3"></textarea>
+    </div>
+    <div class="cf-acciones">
+      <button type="button" id="cfCancelar" class="btn-sec" onclick="resolverConfirm(false)">Cancelar</button>
+      <button type="button" id="cfOk" class="btn" onclick="resolverConfirm(true)">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- aria-live: los avisos (incluido el folio del envio) eran invisibles para lector de pantalla -->
+<div id="toast" role="status" aria-live="polite" aria-atomic="true" onclick="ocultarToast()"></div>
+
+<script>
+// Envuelto en comillas: si la plantilla no se evalúa (deploy servido crudo),
+// esto sigue siendo JS válido en vez de romper todo el script.
+var ADMIN_MODE = ('<?= adminMode ?>' === 'true');
+
+/* Endpoint por defecto para cuando este HTML NO lo sirve Apps Script (p.ej.
+   hospedado en GitHub Pages). Sirve para que el promotor no tenga que
+   configurar nada: si está vacío se usa la clave 'ssop_endpoint' de
+   localStorage. Debe ser la URL /exec de la implementación.
+   Servido por Apps Script esto ni se usa: ahí manda google.script.run. */
+var ENDPOINT_DEFAULT = 'https://script.google.com/macros/s/AKfycbygXHFeDDQ2MWTwYoxN2xDd-RitXKUk6--xm3oltO4ZU-MtUVTbnkeEc9qHYgN3Y_8/exec';
+
+// ===== SVG ICONS (reutilizables en JS) =====
+var ICO_CHEVRON_R='<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>';
+var ICO_CHEVRON_D='<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+var ICO_CHECK='<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+var ICO_PENCIL='<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+
+// ===== ESTADO =====
+var CFG={},PROM=[],DRAFT={},REPORTE=null,PERIODO_EST='abierto';
+var PERIODO='',adminKey='';
+/* Periodos que el SERVIDOR autoriza capturar. null = todavía no se sabe
+   (sin conexión); en ese caso se cae al cálculo local como respaldo. */
+var PERIODOS_OK=null;
+var muralB64=null,muralMime=null,cronB64=null,cronMime=null;
+var K={cfg:'ssop_cfg',prom:'ssop_prom',draft:'ssop_draft_rpt',hist:'ssop_hist',plan:'ssop_plan_draft',cat:'ssop_cat'};
+
+// ===== INICIO =====
+document.addEventListener('DOMContentLoaded',function(){
+  CFG=leer(K.cfg,{});
+  PROM=leer(K.prom,[]);
+  DRAFT=leer(K.draft,{});
+  PERIODO=periodoActual();
+  cargarCatalogo();
+});
+
+/**
+ * Período por defecto al abrir la app. Regla de negocio: el mes M se sigue
+ * capturando/cerrando durante la primera quincena del mes M+1 (el reporte
+ * mensual se arma al finalizar el mes). Por eso, del día 1 al 14 el default
+ * sigue siendo el mes ANTERIOR; a partir del día 15 el default pasa a ser
+ * el mes actual. El selector de 12 meses siempre permite cambiar a mano
+ * (evita huecos/duplicidad), esto solo decide qué aparece preseleccionado.
+ */
+function periodoActual(){
+  var d=new Date();
+  var y=d.getFullYear(), m=d.getMonth(); // m: 0=enero
+  if(d.getDate()<15){
+    m-=1;
+    if(m<0){m=11;y-=1;}
+  }
+  return y+'-'+pad2(m+1);
+}
+function pad2(n){return String(n).padStart(2,'0');}
+function periodoLabel(p){
+  if(!p)return'';
+  var m=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var s=p.split('-');
+  return m[parseInt(s[1],10)-1]+' '+s[0];
+}
+
+// ===== CATÁLOGO =====
+function cargarCatalogo(){
+  setSyncStatus('spin','Cargando…');
+  callBackend({action:'catalogo'}).then(function(r){
+    if(r&&r.ok&&r.promotores){PROM=r.promotores;guardar(K.prom,PROM);}
+    if(r&&r.ok&&r.catalogo){guardar(K.cat,r.catalogo);}
+    actualizarUnidadActiva();
+    if(ADMIN_MODE){abrirAdmin();return;}
+    if(!CFG.promotor_clave){abrirSetup();}
+    // Los periodos capturables los fija el servidor antes de pintar nada.
+    else{cargarPeriodos().then(verificarEstado);}
+  }).catch(function(){
+    setSyncStatus('err','Sin conexión');
+    if(ADMIN_MODE){abrirAdmin();return;}
+    if(!CFG.promotor_clave){abrirSetup();}
+    else{if(PROM.length)actualizarUnidadActiva();verificarEstado();}
+  });
+}
+
+function actualizarUnidadActiva(){
+  if(!CFG.promotor_clave||!PROM.length)return;
+  var p=PROM.find(function(x){return x.clave===CFG.promotor_clave;});
+  if(!p)return;
+  if(p.unidad)CFG.unidad=p.unidad;
+  if(p.nombre)CFG.promotor_nombre=p.nombre;
+  if(p.clues) CFG.clues=p.clues;
+  if(p.unidad_base)CFG.unidad_base=p.unidad_base;
+  guardar(K.cfg,CFG);
+  renderIdentidad();
+}
+
+function verificarEstado(){
+  Promise.all([
+    callBackend({action:'periodo_estado',periodo:PERIODO}),
+    callBackend({action:'obtener_reporte',promotor_clave:CFG.promotor_clave,periodo:PERIODO})
+  ]).then(function(rs){
+    PERIODO_EST=(rs[0]&&rs[0].estado)||'abierto';
+    REPORTE=(rs[1]&&rs[1].reporte)||null;
+    mostrarApp();
+  }).catch(function(){
+    PERIODO_EST='abierto';REPORTE=null;
+    mostrarApp();
+  });
+}
+
+// ===== RENDER PRINCIPAL =====
+function mostrarApp(){
+  ocul('vSetup');show('vApp');
+  renderIdentidad();
+  actualizarPeriodoBadge();
+  if(REPORTE){
+    ocul('vCerrado');ocul('vForm');
+    renderEnviado(REPORTE);
+    show('vEnviado');
+  } else if(PERIODO_EST==='cerrado'){
+    ocul('vEnviado');ocul('vForm');
+    show('vCerrado');
+  } else {
+    ocul('vEnviado');ocul('vCerrado');
+    rellenarBorrador();
+    show('vForm');
+  }
+  setSyncStatus('ok','En línea');
+  renderAvance();
+}
+
+function renderIdentidad(){
+  var n=CFG.promotor_nombre||CFG.promotor_clave||'—';
+  el('idNombre').textContent=n;
+  var info=CFG.unidad||'';
+  if(CFG.unidad_base&&CFG.unidad_base!==CFG.unidad)info+=' (base: '+CFG.unidad_base+')';
+  el('idInfo').textContent=info;
+}
+
+function actualizarPeriodoBadge(){
+  llenarSelPeriodo();
+  var eb=el('periodoEst');
+  eb.textContent=PERIODO_EST==='cerrado'?'Cerrado':'Abierto';
+  eb.className='badge '+(PERIODO_EST==='cerrado'?'cerrado':'abierto');
+}
+
+/**
+ * Selector de mes: últimos 12 meses (cubre enero–diciembre y cargas tardías,
+ * p.ej. capturar junio durante julio). El candado sigue siendo CONTROL_PERIODOS:
+ * si el admin cierra un mes, no se aceptan envíos aunque sea seleccionable.
+ */
+/**
+ * Llena el selector con 12 meses capturables.
+ *
+ * NO ofrece el mes en curso antes del día 15, misma regla que periodoActual():
+ * el mes M se reporta durante la primera quincena de M+1, así que un mes que
+ * todavía se está contabilizando no es capturable. Sin este candado alguien
+ * puede archivar el reporte de julio bajo agosto — pasó en agosto de 2026 y
+ * hubo que reconciliar a mano con migracion/convergerPeriodos.gs.
+ *
+ * El administrador NO queda limitado: su campo <input type="month"> del panel
+ * acepta cualquier mes, porque a veces sí necesita revisar o corregir fuera de
+ * la ventana normal.
+ */
+/**
+ * Llena el selector SOLO con los periodos que el servidor autoriza.
+ *
+ * ANTES generaba 12 meses hacia atrás a ciegas, así que en agosto de 2026
+ * ofrecía hasta "Septiembre 2025" — meses que ya no aplican y que además el
+ * backend aceptaba. Ahora la lista viene de `periodos_capturables`: el periodo
+ * vigente, más los que coordinación haya abierto a propósito.
+ *
+ * Cuando solo hay uno (el caso normal) no se muestra un desplegable de una
+ * sola opción: se pone el mes como texto fijo, que es lo que de verdad
+ * comunica "este es el mes que te toca".
+ */
+function llenarSelPeriodo(){
+  var sel=el('selPeriodo'), fijo=el('periodoFijo');
+  if(!sel)return;
+
+  // Respaldo sin conexión: el mes calculado en el dispositivo, nada más.
+  var lista=(PERIODOS_OK&&PERIODOS_OK.length)
+    ? PERIODOS_OK.map(function(x){return x.periodo;})
+    : [PERIODO||periodoActual()];
+
+  if(lista.indexOf(PERIODO)<0)PERIODO=lista[0];
+
+  if(lista.length<2){
+    sel.classList.add('oculto');
+    if(fijo){fijo.textContent=periodoLabel(PERIODO);fijo.classList.remove('oculto');}
+    return;
+  }
+
+  if(fijo)fijo.classList.add('oculto');
+  sel.classList.remove('oculto');
+  sel.innerHTML='';
+  lista.forEach(function(p){
+    var o=document.createElement('option');
+    o.value=p;
+    o.textContent=periodoLabel(p)+(PERIODOS_OK&&PERIODOS_OK[0]&&p===PERIODOS_OK[0].periodo&&PERIODOS_OK[0].vigente?' · en captura':' · reabierto');
+    sel.appendChild(o);
+  });
+  sel.value=PERIODO;
+}
+
+/** Pregunta al servidor qué meses se pueden capturar. El servidor manda. */
+function cargarPeriodos(){
+  return callBackend({action:'periodos_capturables'}).then(function(r){
+    if(!r||!r.ok)return;
+    PERIODOS_OK=r.periodos||[];
+    // El periodo lo decide la fecha del SERVIDOR, no la del teléfono
+    // (que puede estar mal puesta). Regla no negociable #1.
+    if(PERIODOS_OK.length){
+      var validos=PERIODOS_OK.map(function(x){return x.periodo;});
+      if(validos.indexOf(PERIODO)<0)PERIODO=r.vigente||validos[0];
+    } else {
+      PERIODO=r.vigente||PERIODO;
+    }
+  }).catch(function(){/* sin conexión: se queda el cálculo local */});
+}
+
+function cambiarPeriodo(p){
+  if(!p||p===PERIODO)return;
+  PERIODO=p;
+  setSyncStatus('spin','Cargando…');
+  verificarEstado();
+}
+
+function renderEnviado(rep){
+  el('vEnviadoFolio').textContent='Folio: '+(rep.folio||'—');
+  var items=[
+    {l:'TVF',v:rep.tvf},{l:'Referidos',v:rep.ref_total},
+    {l:'Talleres PS',v:rep.talleres_ps},{l:'Adicciones',v:rep.talleres_adicciones},
+    {l:'Murales',v:rep.periodicos_murales},{l:'Cronogramas',v:rep.cronogramas},
+    {l:'Alianzas',v:rep.alianzas},{l:'Entornos',v:rep.entornos_laborales}
+  ];
+  el('vEnviadoGrid').innerHTML=items.map(function(i){
+    return '<div class="rg-item"><div class="rg-lbl">'+i.l+'</div><div class="rg-val">'+(i.v||0)+'</div></div>';
+  }).join('');
+}
+
+// ===== TABS =====
+var TABS=['Capt','Avance','Hist','Plan'];
+function verTab(id){
+  TABS.forEach(function(t){
+    var activa=(t===id);
+    el('v'+t).classList.toggle('oculto',!activa);
+    var btn=el('tab'+t);
+    btn.classList.toggle('activa',activa);
+    // aria-selected es lo que el lector de pantalla anuncia; la clase solo pinta.
+    btn.setAttribute('aria-selected',activa?'true':'false');
+    btn.tabIndex=activa?0:-1;   // tabindex móvil: Tab entra al grupo, las flechas navegan dentro
+  });
+  if(id==='Avance')renderAvance();
+  if(id==='Hist')cargarHistorial();
+  if(id==='Plan')cargarPlan();
+}
+
+/* Flechas ← → para moverse entre pestañas: es el comportamiento que espera
+   quien navega con teclado en un role="tablist". */
+function navTabs(e,lista,activar){
+  var i=lista.indexOf(document.activeElement.id);
+  if(i<0)return;
+  var d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:
+        e.key==='Home'?-999:e.key==='End'?999:0;
+  if(!d)return;
+  e.preventDefault();
+  var j=d===-999?0:d===999?lista.length-1:(i+d+lista.length)%lista.length;
+  var btn=el(lista[j]);
+  if(btn){btn.focus();activar(btn);}
+}
+document.addEventListener('keydown',function(e){
+  if(document.activeElement&&document.activeElement.classList){
+    if(document.activeElement.classList.contains('tab-btn'))
+      navTabs(e,TABS.map(function(t){return 'tab'+t;}),function(b){verTab(b.id.slice(3));});
+    else if(document.activeElement.classList.contains('admin-tab'))
+      navTabs(e,['recepcion','analisis','cierre','historico'].map(idTabAdmin),
+              function(b){cambiarTabAdmin(b.getAttribute('data-tab'));});
+  }
+});
+function idTabAdmin(t){
+  var b=document.querySelector('.admin-tab[data-tab="'+t+'"]');
+  if(b&&!b.id)b.id='btnTabAdmin-'+t;
+  return b?b.id:'';
+}
+
+// ===== ACORDEÓN =====
+function toggleSec(n){
+  var body=el('body'+n);
+  var head=el('sec'+n).querySelector('.sec-head');
+  var vis=body.classList.contains('vis');
+  body.classList.toggle('vis',!vis);
+  head.classList.toggle('abierta',!vis);
+  head.setAttribute('aria-expanded',!vis?'true':'false');
+}
+
+// ===== REFS AUTO-SUMA =====
+var desgloseVis=false;
+function toggleDesglose(){
+  desgloseVis=!desgloseVis;
+  el('desglose').classList.toggle('oculto',!desgloseVis);
+  el('refToggle').innerHTML=desgloseVis
+    ?(ICO_CHEVRON_D+' Ocultar desglose')
+    :(ICO_CHEVRON_R+' Ver desglose');
+  if(desgloseVis)actualizarRefs();
+}
+function actualizarRefs(){
+  var ids=['ref_iras','ref_edas','ref_edi','ref_embarazadas','ref_citologia','ref_diabetes','ref_hipertensos','ref_tosedores','ref_otros'];
+  var suma=ids.reduce(function(s,id){return s+(parseInt(elv(id),10)||0);},0);
+  el('ref_total').value=suma||'';
+  guardaBorrador();
+}
+
+// ===== ARCHIVOS =====
+function cargarImagen(inp,prevId){
+  var f=inp.files[0];if(!f)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var canvas=document.createElement('canvas');
+      var max=1280,ratio=Math.min(max/img.width,max/img.height,1);
+      canvas.width=Math.round(img.width*ratio);canvas.height=Math.round(img.height*ratio);
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      var dataUrl=canvas.toDataURL('image/jpeg',0.75);
+      muralB64=dataUrl.split(',')[1];muralMime='image/jpeg';
+      var prev=el(prevId);prev.classList.remove('oculto');
+      // alt describe la evidencia; antes la <img> iba sin texto alternativo.
+      prev.innerHTML='<div>Foto lista para enviar ('+Math.round(dataUrl.length/1365)+' KB aprox.)</div>'+
+        '<img src="'+dataUrl+'" alt="Vista previa de la evidencia del periódico mural">'+
+        '<button type="button" class="upload-quitar" onclick="quitarEvidencia(\'mural\')">Quitar foto</button>';
+      toast('Foto adjuntada.');
+    };
+    img.src=e.target.result;
+  };
+  reader.onerror=function(){toast('No se pudo leer la imagen. Intenta con otra.',true);};
+  reader.readAsDataURL(f);
+}
+
+function cargarArchivo(inp,prevId){
+  var f=inp.files[0];if(!f)return;
+  cronMime=f.type||'application/pdf';
+  var reader=new FileReader();
+  reader.onload=function(e){
+    cronB64=e.target.result.split(',')[1];
+    var prev=el(prevId);prev.classList.remove('oculto');
+    prev.innerHTML='<div>'+esc(f.name)+' ('+Math.round(f.size/1024)+' KB)</div>'+
+      '<button type="button" class="upload-quitar" onclick="quitarEvidencia(\'cron\')">Quitar archivo</button>';
+    toast('Archivo adjuntado.');
+  };
+  reader.onerror=function(){toast('No se pudo leer el archivo. Intenta con otro.',true);};
+  reader.readAsDataURL(f);
+}
+
+/* Antes no había forma de deshacer un adjunto equivocado sin recargar
+   la página, y recargar perdía el borrador de la captura. */
+function quitarEvidencia(cual){
+  if(cual==='mural'){
+    muralB64=null;muralMime=null;
+    el('inpMural').value='';
+    var pm=el('prevMural');pm.innerHTML='';pm.classList.add('oculto');
+    toast('Foto quitada.');
+    el('inpMural').focus();
+  } else {
+    cronB64=null;cronMime=null;
+    el('inpCron').value='';
+    var pc=el('prevCron');pc.innerHTML='';pc.classList.add('oculto');
+    toast('Archivo quitado.');
+    el('inpCron').focus();
+  }
+}
+
+// ===== BORRADOR =====
+var CAMPOS=['tvf','cartilla','ref_iras','ref_edas','ref_edi','ref_embarazadas','ref_citologia',
+            'ref_diabetes','ref_hipertensos','ref_tosedores','ref_otros','talleres_ps',
+            'talleres_adicciones','periodicos_murales','cert_comunidades_n','cert_comunidades_desc',
+            'cert_escuelas','entornos_laborales','alianzas','apoyo_logistico','cronogramas'];
+
+function leerFormulario(){
+  var d={};
+  CAMPOS.forEach(function(id){
+    var e=document.getElementById(id);
+    if(!e)return;
+    d[id]=e.type==='number'?(parseInt(e.value,10)||0):e.value;
+  });
+  return d;
+}
+
+function guardaBorrador(){DRAFT=leerFormulario();guardar(K.draft,DRAFT);}
+
+function rellenarBorrador(){
+  if(!DRAFT||Object.keys(DRAFT).length===0)return;
+  CAMPOS.forEach(function(id){
+    var e=document.getElementById(id);
+    if(e&&DRAFT[id]!==undefined)e.value=DRAFT[id]||'';
+  });
+  actualizarRefs();
+}
+
+// ===== ENVIAR =====
+/* Resumen de lo que se va a mandar. El envío es IRREVERSIBLE (uno por mes) y
+   antes se disparaba con un solo toque, sin repaso ni vuelta atrás.
+   HIG Feedback: "avisa cuando la acción es irreversible". */
+var RESUMEN_ENVIO=[
+  {id:'tvf',              l:'Tarjetas de Visita Familiar', meta:70},
+  {id:'cartilla',         l:'Acciones en Cartilla'},
+  {id:'ref_total',        l:'Pacientes referidos'},
+  {id:'talleres_ps',      l:'Talleres de Promoción',      meta:18},
+  {id:'talleres_adicciones',l:'Sesiones de Adicciones',   meta:2},
+  {id:'periodicos_murales',l:'Periódicos murales',        meta:1},
+  {id:'cert_comunidades_n',l:'Acciones Comunidades'},
+  {id:'cert_escuelas',    l:'Acciones Escuelas'},
+  {id:'entornos_laborales',l:'Entornos Laborales'},
+  {id:'alianzas',         l:'Alianzas Estratégicas'},
+  {id:'cronogramas',      l:'Cronogramas entregados',     meta:4}
+];
+
+function enviarReporte(){
+  var form=leerFormulario();
+  var refIds=['ref_iras','ref_edas','ref_edi','ref_embarazadas','ref_citologia','ref_diabetes','ref_hipertensos','ref_tosedores','ref_otros'];
+  var refTotal=refIds.reduce(function(s,id){return s+(form[id]||0);},0);
+
+  var vals=RESUMEN_ENVIO.map(function(c){
+    return {l:c.l,meta:c.meta,v:c.id==='ref_total'?refTotal:(parseInt(form[c.id],10)||0)};
+  });
+  var enCero=vals.filter(function(v){return !v.v;}).length;
+
+  var cuerpo='<p>Vas a enviar tu productividad de <b>'+esc(periodoLabel(PERIODO))+'</b>. '+
+             'Revisa las cifras: <b>solo se puede enviar una vez</b> y después necesitarás '+
+             'al coordinador para corregirlas.</p>'+
+    vals.map(function(v){
+      return '<div class="cf-dato"><span>'+esc(v.l)+'</span><b>'+v.v+
+             (v.meta?' <span style="font-weight:600;color:var(--mu)">/ '+v.meta+'</span>':'')+'</b></div>';
+    }).join('');
+  if(enCero)
+    cuerpo+='<div class="cf-aviso">'+enCero+' indicador'+(enCero===1?'':'es')+
+            ' va'+(enCero===1?'':'n')+' en cero. Si trabajaste en alguno, cancela y captúralo antes de enviar.</div>';
+  if(!muralB64&&(parseInt(form.periodicos_murales,10)||0)>0)
+    cuerpo+='<div class="cf-aviso">Registraste periódicos murales pero no adjuntaste la foto de evidencia.</div>';
+
+  confirmar({
+    titulo:'Confirmar envío del mes',
+    cuerpo:cuerpo,
+    ok:'Sí, enviar',
+    cancelar:'Revisar de nuevo'
+  }).then(function(ok){
+    if(ok)enviarReporteConfirmado(form,refTotal);
+  });
+}
+
+function enviarReporteConfirmado(form,refTotal){
+  var btn=el('btnEnviar');
+  btn.disabled=true;btn.textContent='Enviando…';
+  setSyncStatus('spin','Enviando…');
+
+  var reporte=Object.assign({},form,{
+    client_uuid:       uuid(),
+    timestamp_cliente: new Date().toISOString(),
+    promotor_clave:    CFG.promotor_clave,
+    promotor_nombre:   CFG.promotor_nombre||'',
+    clues:             CFG.clues||'',
+    unidad:            CFG.unidad||'',
+    periodo:           PERIODO,
+    ref_total:         refTotal
+  });
+  if(muralB64){reporte.evidencia_mural_b64=muralB64;reporte.evidencia_mural_mime=muralMime;}
+  if(cronB64){reporte.cronogramas_b64=cronB64;reporte.cronogramas_mime=cronMime;}
+
+  callBackend({action:'reporte',reporte:reporte}).then(function(r){
+    btn.disabled=false;btn.textContent='Enviar Reporte del Mes';
+    if(r&&r.ok){
+      guardar(K.draft,null);
+      guardar(K.hist,null); // el historial cacheado quedó desactualizado
+      setSyncStatus('ok','Enviado');
+      toast('Reporte enviado. Folio: '+(r.folio||''));
+      setTimeout(function(){
+        REPORTE=Object.assign({folio:r.folio,periodo:PERIODO,ref_total:refTotal},form);
+        mostrarApp();
+      },1500);
+    } else {
+      setSyncStatus('err','Error');
+      toast((r&&r.error)||'Error al enviar.',true);
+    }
+  }).catch(function(){
+    btn.disabled=false;btn.textContent='Enviar Reporte del Mes';
+    setSyncStatus('err','Sin conexión');
+    toast('Sin conexión. Verifica tu red e intenta de nuevo.',true);
+  });
+}
+
+// ===== AVANCE =====
+function renderAvance(){
+  el('avancePeriodo').textContent=periodoLabel(PERIODO);
+  var c=el('avanceContenido');
+  if(!REPORTE){
+    c.innerHTML='<p style="color:var(--mu);font-size:13px;padding-top:4px;font-weight:500">Aún no tienes reporte enviado para este mes.</p>';
+    return;
+  }
+  var indicadores=[
+    {l:'Tarjetas de Visita Familiar',meta:70, v:REPORTE.tvf},
+    {l:'Talleres PS',               meta:18, v:REPORTE.talleres_ps},
+    {l:'Sesiones Adicciones',       meta:2,  v:REPORTE.talleres_adicciones},
+    {l:'Periódicos murales',        meta:1,  v:REPORTE.periodicos_murales},
+    {l:'Cronogramas',               meta:4,  v:REPORTE.cronogramas},
+    {l:'Entornos Laborales',        meta:3,  v:REPORTE.entornos_laborales},
+    {l:'Alianzas Estratégicas',     meta:1,  v:REPORTE.alianzas}
+  ];
+  c.innerHTML=indicadores.map(function(ind){
+    var av=parseInt(ind.v,10)||0,pct=ind.meta>0?Math.min(100,Math.round(av/ind.meta*100)):0;
+    var col=av===0?'gris':pct>=95?'verde':pct>=80?'amarillo':'rojo';
+    // El estado va también en palabras: el par rojo/verde del semáforo es
+    // justo el que no distingue el daltonismo más común.
+    var txt=ETIQUETA_SMF[col];
+    return '<div class="smf-item">'+
+      '<div class="smf-circulo '+col+'" aria-hidden="true">'+pct+'%</div>'+
+      '<div class="smf-info">'+
+        '<div class="smf-nombre">'+esc(ind.l)+'</div>'+
+        '<div class="smf-barra-wrap" role="img" aria-label="'+pct+' por ciento de la meta, '+txt+'">'+
+          '<div class="smf-barra '+col+'" style="width:'+pct+'%"></div></div>'+
+        '<div class="smf-vals">'+av+' de '+ind.meta+' &middot; '+pct+'%</div>'+
+        '<div class="smf-estado '+col+'">'+txt+'</div>'+
+      '</div></div>';
+  }).join('');
+}
+var ETIQUETA_SMF={verde:'Meta cumplida',amarillo:'Cerca de la meta',rojo:'Por debajo de la meta',gris:'Sin captura'};
+var LETRA_SMF={verde:'V',amarillo:'A',rojo:'R',gris:'—',sin_meta:'—'};
+/* Punto de semáforo con letra + nombre accesible, en vez de solo color. */
+function dotSmf(col){
+  var c=LETRA_SMF[col]?col:'gris';
+  return '<span class="smf-dot '+c+'" role="img" aria-label="'+
+         (ETIQUETA_SMF[c]||'Sin meta')+'">'+LETRA_SMF[c]+'</span>';
+}
+
+// ===== HISTORIAL =====
+var HIST=[];
+var ICO_PRINT='<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
+
+function cargarHistorial(){
+  var c=el('histContenido');
+  var cache=leer(K.hist,null);
+  HIST=(cache&&cache.clave===CFG.promotor_clave)?(cache.reportes||[]):[];
+  if(HIST.length)renderHistorial();
+  else c.innerHTML='<p class="hist-vacio">Cargando historial…</p>';
+  callBackend({action:'historial',promotor_clave:CFG.promotor_clave}).then(function(r){
+    if(r&&r.ok){
+      HIST=r.reportes||[];
+      guardar(K.hist,{clave:CFG.promotor_clave,reportes:HIST});
+      renderHistorial();
+    } else if(!HIST.length){
+      c.innerHTML='<p class="hist-vacio">'+esc((r&&r.error)||'No se pudo cargar el historial.')+'</p>';
+    }
+  }).catch(function(){
+    if(!HIST.length)c.innerHTML='<p class="hist-vacio">Sin conexión. Tu historial aparecerá cuando tengas red.</p>';
+  });
+}
+
+function renderHistorial(){
+  var c=el('histContenido');
+  if(!HIST.length){
+    c.innerHTML='<p class="hist-vacio">Aún no has enviado ningún reporte mensual.</p>';
+    return;
+  }
+  c.innerHTML=HIST.map(function(r,i){
+    var est=String(r.estatus||'capturado').toLowerCase();
+    return '<div class="hist-card">'+
+      '<div class="hist-mes">'+
+        '<div class="hm-per">'+esc(periodoLabel(r.periodo))+'</div>'+
+        '<div class="hm-folio">'+esc(r.folio||'—')+'</div>'+
+        '<div class="hm-fecha">Enviado: '+esc(r.timestamp_servidor||'—')+'</div>'+
+      '</div>'+
+      '<span class="hist-est '+(est==='validado'?'validado':'capturado')+'">'+esc(est)+'</span>'+
+      '<button type="button" class="btn-acuse" onclick="verAcuseIdx('+i+')">'+ICO_PRINT+' Acuse</button>'+
+    '</div>';
+  }).join('');
+}
+
+function verAcuseIdx(i){verAcuse(HIST[i]);}
+
+// ===== ACUSE INSTITUCIONAL =====
+function verAcuse(r){
+  if(!r){toast('No hay reporte para mostrar.',true);return;}
+  el('acuseSheet').innerHTML=htmlAcuse(r);
+  abrirModal('vAcuse');
+  document.body.classList.add('print-acuse');
+}
+function cerrarAcuse(){
+  cerrarModal('vAcuse');
+  document.body.classList.remove('print-acuse');
+}
+
+function nv(v){var n=parseInt(v,10);return isNaN(n)?0:n;}
+
+function htmlAcuse(r){
+  var nombre=r.promotor_nombre||CFG.promotor_nombre||'—';
+  var clave =r.promotor_clave ||CFG.promotor_clave ||'—';
+  var unidad=r.unidad||CFG.unidad||'—';
+  var clues =r.clues ||CFG.clues ||'—';
+  var est=String(r.estatus||'capturado').toUpperCase();
+
+  var refs=[
+    ['Menores de 5 años con IRAS',r.ref_iras],
+    ['Menores de 5 años con EDAS',r.ref_edas],
+    ['EDI / ET / Crecimiento y Desarrollo',r.ref_edi],
+    ['Embarazadas o puérperas',r.ref_embarazadas],
+    ['Citología vaginal',r.ref_citologia],
+    ['Sospecha de diabetes',r.ref_diabetes],
+    ['Hipertensos',r.ref_hipertensos],
+    ['Tosedores crónicos',r.ref_tosedores],
+    ['Otros motivos (TVF)',r.ref_otros]
+  ];
+  var acts=[
+    ['Tarjetas de Visita Familiar realizadas',r.tvf,'70/mes'],
+    ['Acciones registradas en Cartilla Nacional de Salud',r.cartilla,''],
+    ['Talleres de Promoción de la Salud impartidos',r.talleres_ps,'18/mes'],
+    ['Sesiones educativas y Talleres de Prevención de Adicciones',r.talleres_adicciones,'2/mes'],
+    ['Periódicos murales elaborados',r.periodicos_murales,'1/mes'],
+    ['Acciones del Proceso de Certificación de Escuelas Saludables y Seguras',r.cert_escuelas,''],
+    ['Acciones en el proceso de Certificación de Comunidades Saludables',r.cert_comunidades_n,''],
+    ['Entornos Laborales Saludables intervenidos y/o certificados',r.entornos_laborales,'3/trim'],
+    ['Alianzas Estratégicas establecidas',r.alianzas,'1/trim'],
+    ['Cronogramas semanales de actividades entregados',r.cronogramas,'4/mes']
+  ];
+
+  var filasRefs=refs.map(function(x){
+    return '<tr><td>'+esc(x[0])+'</td><td class="ac-n">'+nv(x[1])+'</td></tr>';
+  }).join('')+
+  '<tr class="ac-total"><td>TOTAL DE PERSONAS REFERIDAS A UNIDAD MÉDICA</td><td class="ac-n">'+nv(r.ref_total)+'</td></tr>';
+
+  var filasActs=acts.map(function(x){
+    return '<tr><td>'+esc(x[0])+'</td><td class="ac-n">'+nv(x[1])+'</td><td class="ac-m">'+esc(x[2]||'—')+'</td></tr>';
+  }).join('');
+
+  var evid=[];
+  if(r.evidencia_mural_url)evid.push('Evidencia fotográfica de periódico mural adjunta en expediente digital.');
+  if(r.cronogramas_url)evid.push('Cronograma(s) adjunto(s) en expediente digital.');
+  var evidTxt=evid.length?evid.join(' '):'Sin archivos adjuntos en este reporte.';
+
+  return ''+
+  '<div class="ac-head">'+
+    '<div class="ac-inst">'+
+      '<div>Instituto de Salud del Estado de M&eacute;xico</div>'+
+      '<div>Coordinaci&oacute;n de Salud &middot; Direcci&oacute;n de Servicios de Salud</div>'+
+      '<div>Subdirecci&oacute;n de Prevenci&oacute;n y Control de Enfermedades</div>'+
+      '<div>Departamento de Pol&iacute;ticas de Salud P&uacute;blica y Promoci&oacute;n de la Salud</div>'+
+      '<div>Jurisdicci&oacute;n Sanitaria XIX Texcoco</div>'+
+      '<div class="ac-tit">Reporte Mensual de Productividad de Promotores y T&eacute;cnicos en Programa de Salud</div>'+
+      '<div class="ac-sub">Acuse de env&iacute;o &middot; Sistema de Seguimiento Operativo de Promotores (SSOP)</div>'+
+    '</div>'+
+    '<div class="ac-folio-box">'+
+      '<div class="ac-fol-lbl">FOLIO</div>'+
+      '<div class="ac-fol-val">'+esc(r.folio||'—')+'</div>'+
+      '<div class="ac-fol-fecha">Enviado: '+esc(r.timestamp_servidor||'—')+'</div>'+
+      '<div class="ac-fol-fecha">Estatus: '+esc(est)+'</div>'+
+    '</div>'+
+  '</div>'+
+  '<table class="ac-ident">'+
+    '<tr><td class="ac-k">Mes de reporte</td><td>'+esc(periodoLabel(r.periodo))+'</td>'+
+        '<td class="ac-k">Clave</td><td>'+esc(clave)+'</td></tr>'+
+    '<tr><td class="ac-k">Nombre</td><td colspan="3">'+esc(nombre)+'</td></tr>'+
+    '<tr><td class="ac-k">Unidad</td><td>'+esc(unidad)+'</td>'+
+        '<td class="ac-k">CLUES</td><td>'+esc(clues)+'</td></tr>'+
+  '</table>'+
+  '<div class="ac-cols">'+
+    '<table class="ac-tbl">'+
+      '<tr><th>Referencias a unidad m&eacute;dica</th><th>Cant.</th></tr>'+filasRefs+
+    '</table>'+
+    '<table class="ac-tbl">'+
+      '<tr><th>Actividades del mes</th><th>Cant.</th><th>Meta</th></tr>'+filasActs+
+    '</table>'+
+  '</div>'+
+  '<div class="ac-txt">'+
+    '<div class="ac-txt-tit">Descripci&oacute;n de acciones de Certificaci&oacute;n de Comunidades Saludables</div>'+
+    '<div class="ac-txt-body">'+esc(r.cert_comunidades_desc||'—')+'</div>'+
+  '</div>'+
+  '<div class="ac-txt">'+
+    '<div class="ac-txt-tit">Apoyo log&iacute;stico (filtros de acceso, ferias de salud, unidades m&oacute;viles, eventos masivos)</div>'+
+    '<div class="ac-txt-body">'+esc(r.apoyo_logistico||'—')+'</div>'+
+  '</div>'+
+  '<div class="ac-txt">'+
+    '<div class="ac-txt-tit">Evidencias digitales</div>'+
+    '<div class="ac-txt-body">'+esc(evidTxt)+'</div>'+
+  '</div>'+
+  '<div class="ac-firmas">'+
+    '<div class="ac-firma">'+
+      '<div class="ac-f-linea"></div>'+
+      '<div class="ac-f-nom">'+esc(nombre)+'</div>'+
+      '<div class="ac-f-cargo">Promotor(a) / T&eacute;cnico(a) en Programa de Salud</div>'+
+      '<div class="ac-f-rol">ELABOR&Oacute;</div>'+
+    '</div>'+
+    '<div class="ac-firma">'+
+      '<div class="ac-f-linea"></div>'+
+      '<div class="ac-f-nom">Nombre, firma y cargo</div>'+
+      '<div class="ac-f-cargo">Coordinador(a) / Administrador(a) / Jefe(a) de Enfermer&iacute;a</div>'+
+      '<div class="ac-f-rol">VALID&Oacute;</div>'+
+    '</div>'+
+    '<div class="ac-firma ac-sello">SELLO</div>'+
+  '</div>'+
+  '<div class="ac-legend">'+
+    'Acuse generado por el SSOP &middot; Jurisdicci&oacute;n Sanitaria XIX Texcoco, ISEM. Los datos corresponden '+
+    'a lo capturado por el(la) promotor(a) en el sistema; el folio permite verificar el registro original. '+
+    'Este documento debe presentarse <b>impreso, con nombre, firma, cargo y sello</b> de quien valida '+
+    '(coordinador(a), administrador(a) o jefe(a) de enfermer&iacute;a) para la validaci&oacute;n de productividad ante SIS. '+
+    '<b>No es v&aacute;lido sin firma y sello.</b>'+
+  '</div>';
+}
+
+// ===== PLAN (CRONOGRAMA — el "planeado") =====
+var PLAN_SRV=[],PLAN_LOCAL=[];
+// Respaldo mínimo por si el catálogo aún no se ha descargado (primer uso offline).
+var ACTS_FALLBACK=[
+  {id:'VISITA_TVF',nombre:'Visita familiar (TVF)'},{id:'TALLER_PS',nombre:'Taller de Promoción de la Salud'},
+  {id:'SESION_ADIC',nombre:'Sesión de Prevención de Adicciones'},{id:'PLATICA',nombre:'Plática educativa'},
+  {id:'PAFF',nombre:'Activación física / PAFF'},{id:'MURAL',nombre:'Periódico mural'},
+  {id:'CRONOGRAMA',nombre:'Entrega de cronograma'},{id:'ENTORNO_LAB',nombre:'Acción en Entorno Laboral'},
+  {id:'CERT_ESCUELA',nombre:'Acción de Certificación Escuela'},{id:'CERT_COMUN',nombre:'Acción de Certificación Comunidad'},
+  {id:'ALIANZA',nombre:'Alianza estratégica'},{id:'CONVOCATORIA',nombre:'Apoyo a convocatoria'}
+];
+
+function cargarPlan(){
+  el('planPeriodo').textContent=periodoLabel(PERIODO);
+  llenarSelectActividades();
+  PLAN_LOCAL=leer(K.plan,[]);
+  renderPlanPendientes();
+  callBackend({action:'cronograma_obtener',promotor_clave:CFG.promotor_clave,periodo:PERIODO}).then(function(r){
+    if(r&&r.ok){PLAN_SRV=r.actividades||[];renderPlanSrv();}
+    else el('planContenido').innerHTML='<p class="hist-vacio">'+esc((r&&r.error)||'No se pudo cargar el plan.')+'</p>';
+  }).catch(function(){
+    el('planContenido').innerHTML='<p class="hist-vacio">Sin conexión. Tus actividades registradas aparecerán al tener red.</p>';
+  });
+}
+
+function llenarSelectActividades(){
+  var sel=el('planActividad');
+  if(sel.options.length>1)return; // ya poblado
+  var cat=leer(K.cat,null);
+  var acts=(cat&&cat.actividades&&cat.actividades.length)?cat.actividades:ACTS_FALLBACK;
+  acts.forEach(function(a){
+    var o=document.createElement('option');
+    o.value=a.id;o.textContent=a.nombre;
+    sel.appendChild(o);
+  });
+}
+
+function agregarActividadPlan(){
+  var fecha=elv('planFecha'),actId=elv('planActividad'),lugar=elv('planLugar').trim();
+  if(!fecha){toast('Elige la fecha planeada.',true);return;}
+  if(!actId){toast('Selecciona la actividad.',true);return;}
+  if(!lugar){toast('Escribe el lugar.',true);return;}
+  var sel=el('planActividad');
+  PLAN_LOCAL.push({
+    client_uuid:uuid(),
+    semana:Math.min(5,Math.ceil(parseInt(fecha.substring(8,10),10)/7)),
+    fecha:fecha,
+    actividad:actId,
+    actividad_nombre:sel.options[sel.selectedIndex].text,
+    lugar:lugar,
+    notas:elv('planNotas').trim()
+  });
+  guardar(K.plan,PLAN_LOCAL);
+  el('planFecha').value='';el('planActividad').value='';el('planLugar').value='';el('planNotas').value='';
+  renderPlanPendientes();
+}
+
+function quitarActividadPlan(i){
+  PLAN_LOCAL.splice(i,1);
+  guardar(K.plan,PLAN_LOCAL);
+  renderPlanPendientes();
+}
+
+function renderPlanPendientes(){
+  var c=el('planPendientes'),btn=el('btnEnviarPlan');
+  if(!PLAN_LOCAL.length){c.innerHTML='';btn.classList.add('oculto');return;}
+  btn.classList.remove('oculto');
+  btn.textContent='Enviar plan ('+PLAN_LOCAL.length+')';
+  c.innerHTML=PLAN_LOCAL.map(function(a,i){
+    return '<div class="hist-card">'+
+      '<div class="hist-mes">'+
+        '<div class="hm-per">'+esc(a.actividad_nombre)+'</div>'+
+        '<div class="hm-fecha">'+esc(a.fecha)+' &middot; Semana '+a.semana+' &middot; '+esc(a.lugar)+'</div>'+
+      '</div>'+
+      '<span class="hist-est capturado">por enviar</span>'+
+      '<button type="button" class="btn-acuse" onclick="quitarActividadPlan('+i+')">Quitar</button>'+
+    '</div>';
+  }).join('');
+}
+
+/**
+ * Envía las actividades una por una con su client_uuid estable: si un reintento
+ * repite una ya recibida, el backend la deduplica (idempotencia, regla #2).
+ * Lo que no alcance a subir queda guardado en el teléfono.
+ */
+function enviarPlan(){
+  if(!PLAN_LOCAL.length)return;
+  var btn=el('btnEnviarPlan');
+  btn.disabled=true;btn.textContent='Enviando…';
+  setSyncStatus('spin','Enviando…');
+  var pendientes=PLAN_LOCAL.slice(),idx=0,fallo=null;
+  function fin(){
+    btn.disabled=false;
+    renderPlanPendientes();
+    if(fallo){setSyncStatus('err','Pendiente');toast(fallo,true);}
+    else{setSyncStatus('ok','En línea');toast('Plan registrado.');}
+    cargarPlan();
+  }
+  function siguiente(){
+    if(idx>=pendientes.length){fin();return;}
+    var a=pendientes[idx];
+    callBackend({action:'cronograma_registrar',cronograma:{
+      client_uuid:a.client_uuid,
+      promotor_clave:CFG.promotor_clave,
+      promotor_nombre:CFG.promotor_nombre||'',
+      unidad:CFG.unidad||'',
+      periodo:a.fecha.substring(0,7),
+      actividades:[a]
+    }}).then(function(r){
+      if(r&&r.ok){
+        PLAN_LOCAL=PLAN_LOCAL.filter(function(x){return x.client_uuid!==a.client_uuid;});
+        guardar(K.plan,PLAN_LOCAL.length?PLAN_LOCAL:null);
+      } else {
+        fallo=(r&&r.error)||'Error al enviar una actividad.';
+      }
+      idx++;siguiente();
+    }).catch(function(){
+      fallo='Sin conexión. Lo pendiente queda guardado en tu teléfono; reintenta al tener red.';
+      fin();
+    });
+  }
+  siguiente();
+}
+
+function renderPlanSrv(){
+  var c=el('planContenido');
+  if(!PLAN_SRV.length){
+    c.innerHTML='<p class="hist-vacio">Aún no registras actividades planeadas este mes.</p>';
+    return;
+  }
+  c.innerHTML=PLAN_SRV.map(function(a){
+    var est=String(a.estatus||'planeado');
+    return '<div class="hist-card">'+
+      '<div class="hist-mes">'+
+        '<div class="hm-per">'+esc(a.actividad_nombre||a.actividad)+'</div>'+
+        '<div class="hm-folio">'+esc(a.folio||'')+'</div>'+
+        '<div class="hm-fecha">'+esc(a.fecha_planeada||'—')+' &middot; Semana '+esc(a.semana||'—')+' &middot; '+esc(a.lugar||'')+'</div>'+
+      '</div>'+
+      '<span class="hist-est '+(est==='autorizado'?'validado':'capturado')+'">'+esc(est)+'</span>'+
+    '</div>';
+  }).join('');
+}
+
+// ===== SETUP =====
+function abrirSetup(){
+  var sel=el('cfgPromotor');
+  var lista=(PROM.length?PROM:leer(K.prom,[])).slice()
+    .filter(function(p){return p.activo!=='0';})
+    .sort(function(a,b){return(a.nombre||'').localeCompare(b.nombre||'');});
+  sel.innerHTML='<option value="">— Selecciona —</option>';
+  lista.forEach(function(p){
+    var o=document.createElement('option');
+    o.value=p.clave;o.textContent=p.nombre+(p.unidad?' · '+p.unidad:'');
+    sel.appendChild(o);
+  });
+  if(CFG.promotor_clave)sel.value=CFG.promotor_clave;
+  show('vSetup');ocul('vApp');
+}
+
+function guardarCfg(){
+  var sel=el('cfgPromotor'),clave=sel.value;
+  if(!clave){toast('Selecciona tu nombre.',true);return;}
+  var lista=PROM.length?PROM:leer(K.prom,[]);
+  var p=lista.find(function(x){return x.clave===clave;});
+  CFG={promotor_clave:clave,promotor_nombre:p?p.nombre:'',unidad:p?p.unidad:'',unidad_base:p?p.unidad_base:'',clues:p?p.clues:''};
+  guardar(K.cfg,CFG);
+  ocul('vSetup');show('vApp');
+  // Primera entrada tras elegir promotor: también aquí manda el servidor.
+  (PERIODOS_OK?Promise.resolve():cargarPeriodos()).then(verificarEstado);
+}
+
+// ===== ADMIN =====
+function abrirAdmin(){
+  show('adminLogin');
+  el('adminDash').classList.add('oculto');
+  el('adminPass').value='';
+  el('adminPeriodo').value=PERIODO;
+  abrirModal('vAdmin','#adminPass');
+}
+function cerrarAdmin(){cerrarModal('vAdmin');}
+
+function loginAdmin(){
+  adminKey=el('adminPass').value;
+  if(!adminKey){toast('Ingresa la contraseña.',true);return;}
+  cargarAdmin();
+}
+
+function cargarAdmin(){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  setSyncStatus('spin','Cargando…');
+  callBackend({action:'admin_resumen',periodo:periodo,key:adminKey}).then(function(r){
+    setSyncStatus('ok','En línea');
+    if(!r||!r.ok){toast(r&&r.error||'Contraseña incorrecta.',true);return;}
+    ocul('adminLogin');show('adminDash');
+    ADM=r;
+    renderAdminDash(r);
+    cargarAlertas();
+    // La analítica trae las metas locales: sin ella la tabla de Recepción se
+    // pinta sin semáforo (a propósito — el cliente ya no inventa metas).
+    cargarAnalitica();
+  }).catch(function(){setSyncStatus('err','Error');toast('Error de conexión.',true);});
+}
+
+function renderAdminDash(r){
+  var estado=r.estado||'abierto';
+  var eb=el('adminEstadoBadge');
+  eb.textContent=(estado==='cerrado'?'Recepción cerrada':'Recepción abierta');
+  eb.className='admin-estado '+estado;
+  el('btnCerrar').style.display=estado==='cerrado'?'none':'';
+  el('btnAbrir').style.display=estado!=='cerrado'?'none':'';
+
+  var rptMap={};
+  (r.reportes||[]).forEach(function(rep){rptMap[rep.promotor_clave]=rep;});
+  var proms=(r.promotores||[]).slice().sort(function(a,b){return(a.nombre||'').localeCompare(b.nombre||'');});
+  var total=proms.length,enviados=Object.keys(rptMap).length;
+  el('adminStats').innerHTML=
+    '<div class="admin-stat"><strong>'+total+'</strong>Promotores</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--ve)"><strong>'+enviados+'</strong>Enviados</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--ro)"><strong>'+(total-enviados)+'</strong>Pendientes</div>';
+
+  window._promMap={};
+  proms.forEach(function(p){window._promMap[p.clave]=p;});
+
+  el('adminTbody').innerHTML=proms.map(function(p){
+    var rep=rptMap[p.clave];
+    var activo=p.activo!=='0';
+    var nomStyle='cursor:pointer;'+(activo?'':'text-decoration:line-through;color:var(--mu);');
+    var estadoCell=!rep
+      ?'<td style="color:var(--ro);font-size:11px;font-weight:700">Pendiente</td>'
+      :'<td style="color:var(--ve);font-size:11px;font-weight:700">'+ICO_CHECK+' Enviado</td>';
+    var nomCell='<td style="'+nomStyle+'"><button type="button" class="celda-editar" '+
+      'data-clave="'+esc(p.clave)+'" onclick="abrirEditFromRow(this)" '+
+      'aria-label="Editar a '+esc(p.nombre||p.clave)+'">'+
+      esc(p.nombre||p.clave)+
+      (activo?'':' &#9940;')+
+      ' <span style="color:var(--o-tx)">'+ICO_PENCIL+'</span></button></td>';
+    if(!rep)return '<tr>'+nomCell+
+      '<td style="font-size:12px">'+(p.unidad||'—')+'</td>'+
+      '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>'+estadoCell+'</tr>';
+    return '<tr>'+nomCell+
+      '<td style="font-size:12px">'+(p.unidad||'—')+'</td>'+
+      tdMeta(rep.tvf,'TVF')+tdMeta(rep.talleres_ps,'TALLER_PS')+
+      tdMeta(rep.talleres_adicciones,'ADICCIONES')+
+      tdMeta(rep.periodicos_murales,'MURAL')+tdMeta(rep.cronogramas,null)+
+      estadoCell+'</tr>';
+  }).join('');
+}
+
+// ===== PANEL ANALÍTICO (pestañas Análisis / Cierre) =====
+var ANL=null;                 // último payload de la acción 'analitica'
+var ADM=null;                 // último payload de 'admin_resumen' (para repintar Recepción)
+var METAS_LOCALES={};         // {IND: meta_local} — única fuente de metas en el cliente
+
+function cambiarTabAdmin(tab){
+  ['recepcion','analisis','cierre','historico'].forEach(function(t){
+    var btn=document.querySelector('.admin-tab[data-tab="'+t+'"]');
+    if(btn)btn.classList.toggle('activa',t===tab);
+    var panel=el('tab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(panel)panel.classList.toggle('oculto',t!==tab);
+  });
+  if(tab==='analisis'){ANL?renderAnalisis():cargarAnalitica();}
+  if(tab==='cierre'){ANL?renderCierre():cargarAnalitica();}
+  if(tab==='historico'){HIST?renderHistorico():cargarHistorico();}
+}
+
+// ---- Pestaña Histórico: DECLARADO vs CAPTURADO ----
+var HIST=null;
+
+function cargarHistorico(){
+  var anio=(el('adminPeriodo').value||PERIODO).substring(0,4);
+  setSyncStatus('spin','Cargando histórico…');
+  el('tabHistorico').innerHTML='<p class="anl-vacio">Cargando…</p>';
+  callBackend({action:'comparativo_enviado',anio:anio,key:adminKey}).then(function(r){
+    setSyncStatus('ok','En línea');
+    if(!r||!r.ok){toast((r&&r.error)||'Error al cargar el histórico.',true);return;}
+    HIST=r;renderHistorico();
+  }).catch(function(){setSyncStatus('err','Error');toast('Error de conexión.',true);});
+}
+
+function renderHistorico(){
+  if(!HIST)return;
+  if(!HIST.meses.length){
+    el('tabHistorico').innerHTML='<p class="anl-vacio">Sin datos de '+esc(HIST.anio)+'.<br>'+
+      'Siembra el histórico con <code>aplicarSiembraHistorico()</code> desde el editor.</p>';
+    return;
+  }
+
+  // Fila por mes: declarado, capturado y % de respaldo del indicador principal
+  var filas=HIST.meses.map(function(m){
+    var tvf=null;
+    m.indicadores.forEach(function(i){if(i.id==='TVF')tvf=i;});
+    var pct=tvf&&tvf.respaldo!==null?tvf.respaldo:null;
+    var col=pct===null?'gris':pct>=95?'verde':pct>=80?'amarillo':'rojo';
+    return '<tr>'+
+      '<td style="font-weight:600">'+esc(m.nombre)+'</td>'+
+      '<td>'+(tvf?tvf.declarado:0)+'</td>'+
+      '<td style="color:var(--o)">'+(tvf&&tvf.estimado?tvf.estimado:'—')+'</td>'+
+      '<td>'+(tvf?tvf.capturado:0)+'</td>'+
+      '<td style="font-weight:700;color:'+(tvf&&tvf.brecha<0?'var(--ro)':'var(--ve)')+'">'+
+        (tvf?(tvf.brecha>0?'+':'')+tvf.brecha:0)+'</td>'+
+      '<td>'+(pct===null?'—':pct+'%')+dotSmf(col)+'</td>'+
+      '<td style="font-size:12px;color:var(--mu)">'+m.promotores_declarados+' / '+m.promotores_capturados+
+        (m.promotores_estimados?' <span style="color:var(--o)">+'+m.promotores_estimados+' est</span>':'')+'</td>'+
+    '</tr>';
+  }).join('');
+
+  // Totales del año
+  var td=0,tc=0;
+  HIST.meses.forEach(function(m){
+    m.indicadores.forEach(function(i){if(i.id==='TVF'){td+=i.declarado;tc+=i.capturado;}});
+  });
+  var pctAnio=td>0?Math.round(tc/td*100):null;
+
+  el('tabHistorico').innerHTML=
+    '<div class="admin-stats">'+
+      '<div class="admin-stat"><strong>'+td+'</strong>TVF declarado</div>'+
+      '<div class="admin-stat" style="border-left:3px solid var(--o)"><strong>'+tc+'</strong>TVF capturado</div>'+
+      '<div class="admin-stat" style="border-left:3px solid '+(pctAnio!==null&&pctAnio<80?'var(--ro)':'var(--ve)')+'">'+
+        '<strong>'+(pctAnio===null?'—':pctAnio+'%')+'</strong>Respaldo</div>'+
+    '</div>'+
+    '<div class="anl-muertos" style="border-left-color:var(--o);margin-top:0;margin-bottom:12px">'+
+      '<strong>Declarado vs capturado</strong>'+
+      '<em>Declarado</em> es lo que se envió a la jurisdicción, congelado al momento del envío. '+
+      '<em>Capturado</em> es lo que los promotores reportaron en el sistema. '+
+      'El <em>respaldo</em> dice qué parte de lo que firmaste está sustentada por captura individual.'+
+    '</div>'+
+    '<div class="admin-tbl-wrap"><table><thead><tr>'+
+      '<th>Mes</th><th>Declarado</th><th>Estimado</th><th>Capturado</th><th>Brecha</th>'+
+      '<th>Respaldo</th><th>Prom. dec/cap</th>'+
+    '</tr></thead><tbody>'+filas+'</tbody></table></div>'+
+    (HIST.detalle.length
+      ? '<div class="avance-tit" style="margin-top:22px">Detalle por promotor &middot; '+esc(HIST.periodo_detalle)+'</div>'+
+        '<div class="admin-tbl-wrap"><table><thead><tr>'+
+        '<th style="min-width:130px">Promotor</th><th>Declarado</th><th>Capturado</th><th>Brecha</th>'+
+        '</tr></thead><tbody>'+HIST.detalle.map(function(d){
+          var br=(d.capturado===null?0:d.capturado)-(d.declarado===null?0:d.declarado);
+          return '<tr><td style="font-size:11px">'+esc(d.promotor_nombre)+'</td>'+
+            '<td>'+(d.declarado===null?'—':d.declarado)+'</td>'+
+            '<td>'+(d.capturado===null?'—':d.capturado)+'</td>'+
+            '<td style="font-weight:700;color:'+(br<0?'var(--ro)':'var(--ve)')+'">'+
+              (br>0?'+':'')+br+'</td></tr>';
+        }).join('')+'</tbody></table></div>'
+      : '');
+}
+
+function cargarAnalitica(){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  setSyncStatus('spin','Analizando…');
+  callBackend({action:'analitica',periodo:periodo,key:adminKey}).then(function(r){
+    setSyncStatus('ok','En línea');
+    if(!r||!r.ok){toast((r&&r.error)||'Error al calcular la analítica.',true);return;}
+    ANL=r;
+    METAS_LOCALES={};
+    if(r.promotores.length){
+      r.promotores[0].indicadores.forEach(function(i){METAS_LOCALES[i.id]=i.meta_local;});
+    }
+    renderAnalisis();
+    if(ADM)renderAdminDash(ADM);   // repinta Recepción ya con las metas locales
+    if(!el('tabCierre').classList.contains('oculto'))renderCierre();
+  }).catch(function(){setSyncStatus('err','Error');toast('Error de conexión.',true);});
+}
+
+function renderAnalisis(){
+  if(!ANL)return;
+  var c=ANL.cierre;
+  var nSenales=ANL.promotores.reduce(function(a,p){return a+p.senales.length;},0);
+
+  var html='<div class="admin-stats">'+
+    '<div class="admin-stat"><strong>'+c.campo.reportaron+'/'+c.campo.esperados+'</strong>Reportaron</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--o)"><strong>'+c.total.TVF+'</strong>TVF total</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--ve)"><strong>'+promedioCumplimiento()+'%</strong>Cumpl. local</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--ro)"><strong>'+nSenales+'</strong>Señales</div>'+
+    '</div>';
+
+  html+= ANL.promotores.length
+    ? ANL.promotores.map(filaAnalisis).join('')
+    : '<p class="anl-vacio">Sin promotores de campo activos en este período.</p>';
+
+  if(ANL.muertos.length){
+    html+='<div class="anl-muertos"><strong>Indicadores sin señal de vida</strong>'+
+      ANL.muertos.map(function(m){
+        return esc(m.id)+' &middot; '+m.pct_ceros+'% en cero ('+m.n+' registros)';
+      }).join(' &nbsp;|&nbsp; ')+
+      '<br>Revisar si es problema de captura o de operación.</div>';
+  }
+  el('tabAnalisis').innerHTML=html;
+}
+
+/** Promedio de pct_local sobre indicadores con meta local, entre quienes reportaron. */
+function promedioCumplimiento(){
+  var suma=0,n=0;
+  ANL.promotores.forEach(function(p){
+    if(p.sin_reporte)return;
+    p.indicadores.forEach(function(i){
+      if(i.meta_local>0&&!i.muerto&&i.pct_local!==null){suma+=i.pct_local;n++;}
+    });
+  });
+  return n?Math.round(suma/n):0;
+}
+
+function filaAnalisis(p){
+  var chips=p.sin_reporte
+    ? '<span class="anl-chip alta">sin reporte</span>'
+    : p.senales.map(function(s){
+        return '<span class="anl-chip '+esc(s.severidad)+'">'+esc(etiquetaSenal(s.regla))+'</span>';
+      }).join('');
+  if(!p.sin_reporte&&!p.senales.length&&p.cuartil_peor===1)
+    chips='<span class="anl-chip info">cuartil inferior</span>';
+
+  var delta=(p.delta_peor!==null&&p.delta_peor<0)
+    ? '<span class="anl-delta">&darr;'+Math.abs(Math.round(p.delta_peor*100))+'%</span>' : '';
+
+  var tvf=null;
+  p.indicadores.forEach(function(i){if(i.id==='TVF')tvf=i;});
+
+  return '<button type="button" class="anl-fila'+(p.semaforo==='rojo'?' critica':'')+'" '+
+    'onclick="abrirDetalleAnl(\''+esc(p.promotor_clave)+'\')">'+
+    '<div style="min-width:0">'+
+      '<div class="anl-nombre">'+esc(p.promotor_nombre)+'</div>'+
+      '<div class="anl-unidad">'+esc(p.unidad||'—')+'</div>'+
+      '<div class="anl-meta">'+sparkline(p.serie_tvf)+
+        '<span class="anl-unidad">TVF '+(tvf?tvf.valor:0)+'</span>'+delta+chips+'</div>'+
+    '</div>'+
+    dotSmf(p.semaforo)+
+  '</button>';
+}
+
+function etiquetaSenal(regla){
+  var m={clavado_en_meta:'clavado en meta',identico_mes_previo:'igual al mes previo',
+         salto_anomalo:'salto anómalo',cero_atipico:'cero atípico',filas_gemelas:'filas gemelas'};
+  return m[regla]||regla;
+}
+
+function sparkline(serie){
+  if(!serie||!serie.length)return '';
+  var max=Math.max.apply(null,serie.concat([1]));
+  return '<span class="anl-spark">'+serie.map(function(v,i){
+    return '<i class="'+(i===serie.length-1?'ult':'')+'" style="height:'+
+      Math.max(2,Math.round(v/max*22))+'px"></i>';
+  }).join('')+'</span>';
+}
+
+function abrirDetalleAnl(clave){
+  var p=null;
+  ANL.promotores.forEach(function(x){if(x.promotor_clave===clave)p=x;});
+  if(!p)return;
+  cerrarDetalleAnl();
+
+  var filas=p.indicadores.map(function(i){
+    return '<tr><td style="font-size:11px">'+esc(i.id)+(i.muerto?' &#9888;':'')+'</td>'+
+      '<td><strong>'+i.valor+'</strong></td>'+
+      '<td>'+(i.propio===null?'sin base':i.propio)+'</td>'+
+      '<td>'+(i.grupo===null?'—':i.grupo)+'</td>'+
+      '<td>'+(i.meta_local||'—')+'</td>'+
+      '<td>'+(i.semaforo==='sin_meta'?'—':dotSmf(i.semaforo))+'</td></tr>';
+  }).join('');
+
+  var senales=p.senales.length
+    ? '<ul style="margin:8px 0;padding-left:18px;font-size:11px;line-height:1.6">'+
+      p.senales.map(function(s){
+        return '<li><strong>'+esc(etiquetaSenal(s.regla))+':</strong> '+esc(s.detalle)+'</li>';
+      }).join('')+'</ul>'
+    : '<p style="font-size:11px;color:var(--mu);margin:8px 0">Sin señales de dato no creíble.</p>';
+
+  el('tabAnalisis').insertAdjacentHTML('afterbegin',
+    '<div id="anlDetalle" class="anl-det">'+
+      '<h3>'+esc(p.promotor_nombre)+'</h3>'+
+      '<p style="font-size:11px;color:var(--mu);margin:0 0 6px">'+esc(p.unidad||'—')+
+        ' &middot; '+esc(p.puesto)+(p.folio?' &middot; '+esc(p.folio):'')+'</p>'+
+      (p.sin_reporte?'<p class="anl-chip alta" style="display:inline-block">No entregó reporte este período</p>':'')+
+      senales+
+      '<div class="admin-tbl-wrap"><table><thead><tr>'+
+        '<th>Indicador</th><th>Mes</th><th>Su mediana</th><th>Grupo</th><th>Meta local</th><th></th>'+
+      '</tr></thead><tbody>'+filas+'</tbody></table></div>'+
+      '<div class="admin-ctl" style="margin-top:12px">'+
+        (p.sin_reporte?'':'<button type="button" class="btn-ctl accion" onclick="reabrirReporteAdmin(\''+esc(p.promotor_clave)+'\')">Reabrir para corrección</button>')+
+        '<button type="button" class="btn-ctl reload" onclick="cerrarDetalleAnl()">Cerrar</button>'+
+      '</div>'+
+    '</div>');
+  el('anlDetalle').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function cerrarDetalleAnl(){
+  var d=el('anlDetalle');
+  if(d)d.parentNode.removeChild(d);
+}
+
+function reabrirReporteAdmin(clave){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  // Antes usaba prompt(): sin estilo, sin foco gestionado y bloqueado en
+  // algunos contextos embebidos. Además aceptaba motivo vacío.
+  confirmar({
+    titulo:'Reabrir el reporte',
+    cuerpo:'<p>Se reabrirá <b>'+esc(periodoLabel(periodo))+'</b> para este promotor, '+
+           'que podrá corregir y reenviar sus cifras.</p>',
+    pedirMotivo:'Motivo de la reapertura (queda registrado en el reporte)',
+    ok:'Reabrir'
+  }).then(function(motivo){
+    if(!motivo)return;
+    setSyncStatus('spin','Reabriendo…');
+    callBackend({action:'reabrir_reporte',promotor_clave:clave,periodo:periodo,
+                 motivo:motivo,key:adminKey}).then(function(r){
+      setSyncStatus('ok','En línea');
+      if(r&&r.ok){
+        toast('Reabierto. El promotor ya puede corregir '+periodoLabel(periodo)+'.');
+        cerrarDetalleAnl();cargarAnalitica();
+      } else toast((r&&r.error)||'No se pudo reabrir.',true);
+    }).catch(function(){setSyncStatus('err','Error');toast('Error de conexión.',true);});
+  });
+}
+
+// ---- Pestaña Cierre y envío ----
+var CAMPOS_OFICINA=['tvf','entornos_laborales','talleres_ps','alianzas','cartilla',
+  'cert_escuelas','talleres_adicciones','ref_total','cert_comunidades_n','periodicos_murales'];
+
+function campoAInd(campo){
+  var m={tvf:'TVF',entornos_laborales:'ENTORNOS',talleres_ps:'TALLER_PS',
+         alianzas:'ALIANZAS',cartilla:'CARTILLA',cert_escuelas:'ESCUELAS',
+         talleres_adicciones:'ADICCIONES',ref_total:'REFERIDOS',
+         cert_comunidades_n:'COMUNIDADES',periodicos_murales:'MURAL'};
+  return m[campo];
+}
+
+function renderCierre(){
+  if(!ANL)return;
+  var oficina=ANL.oficina.map(function(o){
+    var inputs=CAMPOS_OFICINA.map(function(c){
+      var val=o.indicadores[campoAInd(c)]||0;
+      return '<label>'+esc(c)+
+        '<input type="number" inputmode="numeric" min="0" id="ofi_'+esc(o.promotor_clave)+'_'+c+'" value="'+val+'"></label>';
+    }).join('');
+    return '<div class="anl-det" style="box-shadow:var(--s0);border-color:var(--bd)">'+
+      '<h3 style="font-size:13px">'+esc(o.promotor_nombre)+
+        (o.capturado?'':' <span class="anl-chip baja">sin capturar</span>')+'</h3>'+
+      '<div class="ofi-grid">'+inputs+'</div>'+
+      '<button type="button" class="btn-ctl accion" style="margin-top:10px" '+
+        'onclick="guardarOficina(\''+esc(o.promotor_clave)+'\')">Guardar cifras</button>'+
+    '</div>';
+  }).join('');
+
+  var per=el('adminPeriodo').value||PERIODO;
+  el('tabCierre').innerHTML=
+    '<div class="anl-muertos" style="border-left-color:var(--g);margin-top:0">'+
+      '<strong>Cierre del mes &middot; '+esc(periodoLabel(per))+'</strong>'+
+      'Sigue los pasos en orden. Todo se hace desde aqu&iacute;: no hace falta entrar a Apps Script.'+
+    '</div>'+
+
+    '<div class="avance-tit">1 &middot; Personal de oficina</div>'+
+    (oficina||'<p class="anl-vacio">Nadie marcado como <code>adscripcion=oficina</code> en CAT_PROMOTORES.</p>')+
+
+    '<div class="avance-tit" style="margin-top:26px">2 &middot; Plazas inactivas y oficina</div>'+
+    '<p style="font-size:11px;color:var(--mu);margin:0 0 8px">'+
+      'Se estima con la mediana de los meses que esa persona s&iacute; report&oacute; (m&iacute;nimo 3), '+
+      'tanto para plazas inactivas como para el personal de oficina. '+
+      'Lo que hayas capturado arriba manda: a esa persona no se le estima encima. '+
+      'Qui&eacute;n lleve m&aacute;s de 3 meses sin reportar se considera baja y queda fuera.</p>'+
+    '<div class="admin-ctl">'+
+      '<button type="button" class="btn-ctl reload" onclick="estimar(false)">Revisar estimaci&oacute;n</button>'+
+      '<button type="button" class="btn-ctl accion" onclick="estimar(true)">Aplicar estimaci&oacute;n</button>'+
+    '</div>'+
+    '<div id="estimResultado" style="margin-top:10px;font-size:12px"></div>'+
+
+    '<div class="avance-tit" style="margin-top:26px">3 &middot; Libro institucional</div>'+
+    '<div class="admin-ctl">'+
+      '<button type="button" class="btn-ctl accion" onclick="generarMes()">Generar '+esc(periodoLabel(per))+'</button>'+
+      '<button type="button" class="btn-ctl accion" onclick="reconstruirLibro()">Reconstruir el a&ntilde;o completo</button>'+
+    '</div>'+
+    '<p style="font-size:11px;color:var(--mu);margin:8px 0 0">'+
+      '<strong>Generar</strong> escribe la pesta&ntilde;a de este mes y congela lo declarado. '+
+      '<strong>Reconstruir</strong> rearma todas las pesta&ntilde;as del a&ntilde;o desde lo declarado, '+
+      'para que el archivo salga completo.</p>'+
+    '<div id="cierreResultado" style="margin-top:12px;font-size:12px"></div>';
+}
+
+function estimar(aplicar){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  setSyncStatus('spin',aplicar?'Estimando…':'Revisando…');
+  el('estimResultado').innerHTML='Calculando…';
+  callBackend({action:'estimacion',periodo:periodo,aplicar:aplicar,key:adminKey}).then(function(r){
+    setSyncStatus('ok','En línea');
+    if(!r||!r.ok){
+      el('estimResultado').innerHTML='<span style="color:var(--ro)">'+esc((r&&r.error)||'Error.')+'</span>';
+      return;
+    }
+    var h='<p><strong>'+(aplicar?'Aplicado':'Simulacro')+'</strong> &middot; '+
+      r.candidatos+' candidatas ('+r.inactivos+' inactivas, '+r.oficina+' de oficina) &middot; '+
+      r.estimadas+' estimadas.</p>';
+    if(r.detalle.length){
+      h+='<div class="admin-tbl-wrap"><table><thead><tr>'+
+        '<th style="min-width:130px">Plaza</th><th>Tipo</th><th>Base</th><th>Estimado</th></tr></thead><tbody>'+
+        r.detalle.map(function(d){
+          return '<tr><td style="font-size:11px">'+esc(d.nombre)+'</td>'+
+            '<td style="font-size:12px">'+esc(d.tipo)+'</td>'+
+            '<td style="font-size:12px">'+d.meses+' meses</td>'+
+            '<td style="font-size:12px">'+esc(d.valores||'todo en cero')+'</td></tr>';
+        }).join('')+'</tbody></table></div>';
+    }
+    if(r.ya_capturados&&r.ya_capturados.length){
+      h+='<div class="anl-muertos"><strong>No se estimaron porque ya tienen captura</strong>'+
+        r.ya_capturados.map(function(y){return esc(y.nombre)+' ('+esc(y.tipo)+')';}).join(' · ')+
+        '<br>Lo que capturaste a mano manda sobre la estimación.</div>';
+    }
+    if(r.bajas&&r.bajas.length){
+      h+='<div class="anl-muertos" style="border-left-color:var(--ro)"><strong>No se estimaron por baja</strong>'+
+        r.bajas.map(function(b){
+          return esc(b.nombre)+' — '+esc(b.motivo)+(b.ultimo?' (último: '+esc(b.ultimo)+')':'');
+        }).join('<br>')+'</div>';
+    }
+    if(r.sin_base&&r.sin_base.length){
+      h+='<div class="anl-muertos"><strong>Sin base suficiente</strong>'+
+        r.sin_base.map(function(s){return esc(s.nombre)+' — solo '+s.meses+' meses reales';}).join('<br>')+
+        '<br>Decide a mano si se reportan en cero.</div>';
+    }
+    if(!aplicar&&r.estimadas) h+='<p style="color:var(--mu)">Si te cuadra, pulsa <strong>Aplicar estimación</strong>.</p>';
+    el('estimResultado').innerHTML=h;
+    if(aplicar){toast('Estimación aplicada.');ANL=null;HIST=null;}
+  }).catch(function(err){
+    // Muestra la causa real: un "Error de conexión" genérico no dice si fue la
+    // red, una excepción del servidor o que la operación tardó demasiado.
+    setSyncStatus('err','Error');
+    var msg=err&&(err.message||err.toString&&err.toString())||'sin detalle';
+    el('estimResultado').innerHTML='<span style="color:var(--ro)">No se pudo completar: '+esc(msg)+'</span>';
+    toast('Falló la estimación.',true);
+  });
+}
+
+function generarMes(){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  setSyncStatus('spin','Generando…');
+  el('cierreResultado').innerHTML='Generando '+esc(periodoLabel(periodo))+'…';
+  callBackend({action:'exportar_mes',periodo:periodo,key:adminKey})
+    .then(pintarResultadoLibro).catch(errLibro);
+}
+
+function reconstruirLibro(){
+  var anio=(el('adminPeriodo').value||PERIODO).substring(0,4);
+  setSyncStatus('spin','Reconstruyendo…');
+  el('cierreResultado').innerHTML='Rearmando el año '+esc(anio)+'…';
+  callBackend({action:'reconstruir_libro',anio:anio,key:adminKey})
+    .then(pintarResultadoLibro).catch(errLibro);
+}
+
+function pintarResultadoLibro(r){
+  setSyncStatus('ok','En línea');
+  if(!r||!r.ok){
+    el('cierreResultado').innerHTML='<span style="color:var(--ro)">'+esc((r&&r.error)||'Error al generar.')+'</span>';
+    return;
+  }
+  var filas=(r.resumen||[]).map(function(m){
+    return '<tr><td>'+esc(nombreMesCliente(m.periodo))+'</td><td>'+m.filas+'</td>'+
+      '<td><strong>'+m.totales[0]+'</strong></td></tr>';
+  }).join('');
+  el('cierreResultado').innerHTML=
+    '<p><a href="'+esc(r.url)+'" target="_blank">Abrir en Google Sheets</a> &nbsp;&middot;&nbsp; '+
+    '<a href="'+esc(r.xlsx)+'" target="_blank"><strong>Descargar .xlsx</strong></a></p>'+
+    '<div class="admin-tbl-wrap"><table><thead><tr><th>Mes</th><th>Filas</th><th>TVF</th></tr></thead>'+
+    '<tbody>'+filas+'</tbody></table></div>';
+  HIST=null;
+}
+
+function errLibro(){setSyncStatus('err','Error');toast('Error de conexión.',true);}
+
+var MESES_CLIENTE=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO',
+                   'JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+function nombreMesCliente(p){
+  var m=parseInt(String(p).split('-')[1],10);
+  return MESES_CLIENTE[m-1]||p;
+}
+
+function guardarOficina(clave){
+  var cifras={};
+  CAMPOS_OFICINA.forEach(function(c){
+    cifras[c]=parseInt(el('ofi_'+clave+'_'+c).value,10)||0;
+  });
+  var periodo=el('adminPeriodo').value||PERIODO;
+  setSyncStatus('spin','Guardando…');
+  callBackend({action:'oficina_capturar',promotor_clave:clave,periodo:periodo,
+               cifras:cifras,key:adminKey}).then(function(r){
+    setSyncStatus('ok','En línea');
+    if(r&&r.ok){toast('Cifras guardadas.');cargarAnalitica();}
+    else toast((r&&r.error)||'No se pudo guardar.',true);
+  }).catch(function(){setSyncStatus('err','Error');toast('Error de conexión.',true);});
+}
+
+// generarLibro() se eliminó: llamaba a exportar_libro sin acotar periodos, lo
+// que regeneraba TODOS los meses desde REPORTE_MENSUAL y habría pisado
+// enero-junio con datos incompletos. Ahora hay dos botones explícitos:
+// generarMes() para el mes en curso y reconstruirLibro() para el año, este
+// último desde HISTORICO_ENVIADO, que es lo declarado.
+
+/**
+ * Celda con semáforo contra la meta LOCAL que vino del backend (CAT_METAS).
+ * El cliente ya no contiene ningún literal de meta: si la analítica todavía no
+ * cargó, o el indicador no tiene meta local, se pinta el número sin semáforo.
+ */
+function tdMeta(v,indId){
+  var n=parseInt(v,10)||0;
+  var meta=indId?METAS_LOCALES[indId]:0;
+  if(!meta) return '<td>'+n+'</td>';
+  var pct=Math.round(n/meta*100);
+  var col=n===0?'gris':pct>=95?'verde':pct>=80?'amarillo':'rojo';
+  return '<td>'+n+dotSmf(col)+'</td>';
+}
+
+/* Cerrar/abrir la recepción afecta a los 34 promotores a la vez y se
+   disparaba con un solo toque, sin confirmación. */
+function setPeriodo(estado){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  var cerrando=(estado==='cerrado');
+  confirmar({
+    titulo:cerrando?'Cerrar la recepción':'Reabrir la recepción',
+    cuerpo:'<p>Período <b>'+esc(periodoLabel(periodo))+'</b>.</p>'+
+      (cerrando
+        ? '<div class="cf-aviso">Ningún promotor podrá enviar ni corregir su reporte de este mes hasta que vuelvas a abrirlo.</div>'
+        : '<p>Los promotores que aún no han enviado podrán hacerlo.</p>'),
+    ok:cerrando?'Sí, cerrar':'Sí, abrir',
+    peligro:cerrando
+  }).then(function(ok){
+    if(!ok)return;
+    setSyncStatus('spin','Aplicando…');
+    callBackend({action:'set_periodo',periodo:periodo,estado:estado,key:adminKey}).then(function(r){
+      setSyncStatus('ok','En línea');
+      if(r&&r.ok){toast('Recepción de '+periodoLabel(periodo)+': '+estado+'.');cargarAdmin();}
+      else toast(r&&r.error||'Error',true);
+    }).catch(function(){setSyncStatus('err','Error');toast('Error de conexión.',true);});
+  });
+}
+
+// ===== FASE 2: COTEJO Y ALERTAS (admin) =====
+var ALERTAS=[];
+
+/* Deshabilita el botón mientras corre la petición. Sin esto, tocar dos veces
+   lanzaba dos cotejos concurrentes contra la misma hoja. */
+function ocupado(btn,txt){
+  if(!btn)return function(){};
+  var orig=btn.innerHTML;
+  btn.disabled=true;btn.setAttribute('aria-busy','true');
+  if(txt)btn.textContent=txt;
+  return function(){btn.disabled=false;btn.removeAttribute('aria-busy');btn.innerHTML=orig;};
+}
+
+function ejecutarCotejo(ev){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  var libera=ocupado(ev&&ev.currentTarget,'Cotejando…');
+  setSyncStatus('spin','Cotejando…');
+  callBackend({action:'cotejo_ejecutar',periodo:periodo,key:adminKey}).then(function(r){
+    libera();setSyncStatus('ok','En línea');
+    if(!r||!r.ok){toast((r&&r.error)||'Error al ejecutar el cotejo.',true);return;}
+    toast('Cotejo ejecutado: '+(r.nuevas||0)+' alertas nuevas.');
+    ALERTAS=r.alertas||[];
+    renderAlertas();
+  }).catch(function(){libera();setSyncStatus('err','Error');toast('Error de conexión.',true);});
+}
+
+function cargarAlertas(){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  callBackend({action:'alertas',periodo:periodo,key:adminKey}).then(function(r){
+    if(r&&r.ok){ALERTAS=r.alertas||[];renderAlertas();}
+  }).catch(function(){});
+}
+
+function renderAlertas(){
+  var stats={alta:0,media:0,baja:0,informativa:0},abiertas=0;
+  ALERTAS.forEach(function(a){
+    if(stats[a.severidad]!==undefined)stats[a.severidad]++;
+    if(a.estatus!=='atendida')abiertas++;
+  });
+  el('alertaStats').innerHTML=
+    '<div class="admin-stat" style="border-left:3px solid var(--ro)"><strong>'+stats.alta+'</strong>Altas</div>'+
+    '<div class="admin-stat" style="border-left:3px solid #D97706"><strong>'+stats.media+'</strong>Medias</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--mu2)"><strong>'+(stats.baja+stats.informativa)+'</strong>Baja/Info</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--g)"><strong>'+abiertas+'</strong>Abiertas</div>';
+
+  if(!ALERTAS.length){
+    el('alertaTbody').innerHTML='<tr><td colspan="4" style="color:var(--mu);font-size:12px">Sin alertas para este período. Ejecuta el cotejo para generarlas.</td></tr>';
+    return;
+  }
+  el('alertaTbody').innerHTML=ALERTAS.map(function(a){
+    var atendida=a.estatus==='atendida';
+    var accion=atendida
+      ?'<button type="button" class="btn-ctl accion btn-mini" onclick="marcarAlerta(\''+esc(a.folio_alerta)+'\',\'abierta\')">Reabrir</button>'
+      :'<button type="button" class="btn-ctl accion btn-mini" onclick="marcarAlerta(\''+esc(a.folio_alerta)+'\',\'atendida\')">Atender</button>';
+    return '<tr'+(atendida?' style="opacity:.5"':'')+'>'+
+      '<td>'+esc(a.promotor_nombre||a.promotor_clave)+'</td>'+
+      '<td style="text-align:left;font-size:11px">'+esc(a.detalle)+'</td>'+
+      '<td><span class="sev sev-'+esc(a.severidad)+'">'+esc(a.severidad)+'</span></td>'+
+      '<td>'+accion+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function marcarAlerta(folio,estatus){
+  callBackend({action:'alerta_estatus',folio_alerta:folio,estatus:estatus,key:adminKey}).then(function(r){
+    if(r&&r.ok)cargarAlertas();
+    else toast((r&&r.error)||'Error al actualizar la alerta.',true);
+  }).catch(function(){toast('Error de conexión.',true);});
+}
+
+// ===== EDITAR PROMOTOR =====
+var _editClave='';
+var _editActivo='1';
+
+function abrirEditFromRow(tdEl){
+  var clave=tdEl.getAttribute('data-clave');
+  var p=(window._promMap||{})[clave]||{};
+  abrirEditPromotor(clave,p);
+}
+
+function abrirEditPromotor(clave,p){
+  p=p||{};
+  _editClave=clave; _editActivo=p.activo!=='0'?'1':'0';
+  el('editNombre').textContent=(p.nombre||'')+' ('+clave+')';
+
+  // La base es lo que se rinde. Se muestra solo como referencia: cambiarla es un
+  // movimiento administrativo distinto y no se hace desde aquí.
+  el('editBase').innerHTML=
+    '<strong style="color:var(--ink2)">Adscripción base — es la que se reporta</strong><br>'+
+    esc(p.unidad_base||'sin unidad base')+
+    (p.clues_base?' &middot; '+esc(p.clues_base):' &middot; <em>sin CLUES base</em>');
+
+  el('editUnidad').value=p.unidad||'';
+  el('editClues').value=p.clues||'';
+  el('editVigente').value=el('adminPeriodo').value||PERIODO;
+  el('editRotaciones').innerHTML='';
+  actualizarBtnActivo();
+  abrirModal('modalEdit','#editUnidad');
+  cargarRotaciones(clave);
+}
+
+function cargarRotaciones(clave){
+  callBackend({action:'rotaciones',clave:clave,key:adminKey}).then(function(r){
+    if(!r||!r.ok||!r.rotaciones.length)return;
+    el('editRotaciones').innerHTML='<strong>Rotaciones anteriores</strong><br>'+
+      r.rotaciones.slice(0,5).map(function(x){
+        return esc(x.vigente_desde)+': '+esc(x.unidad_anterior||'—')+' &rarr; '+esc(x.unidad_nueva||'—');
+      }).join('<br>');
+  }).catch(function(){});
+}
+
+function actualizarBtnActivo(){
+  var btn=el('editActivoBtn');
+  if(_editActivo==='1'){
+    btn.textContent='Activo';
+    btn.style.background='#DCFCE7';btn.style.color='#166534';
+  } else {
+    btn.textContent='Inactivo';
+    btn.style.background='#FFE4E6';btn.style.color='#9B1C2E';
+  }
+}
+
+function toggleEditActivo(){
+  _editActivo=_editActivo==='1'?'0':'1';
+  actualizarBtnActivo();
+}
+
+function cerrarEdit(){cerrarModal('modalEdit');}
+
+function guardarEditPromotor(){
+  var unidad=el('editUnidad').value.trim();
+  if(!unidad){toast('Escribe la unidad operativa.',true);return;}
+  var campos={
+    unidad:unidad,
+    clues:el('editClues').value.trim(),
+    activo:_editActivo,
+    vigente_desde:el('editVigente').value||''
+  };
+  // rotar_promotor escribe el catálogo y, si cambió la adscripción operativa,
+  // deja constancia en la bitácora ROTACIONES.
+  callBackend({action:'rotar_promotor',clave:_editClave,campos:campos,key:adminKey}).then(function(r){
+    if(r&&r.ok){
+      toast(r.roto?'Rotación registrada.':'Guardado correctamente.');
+      cerrarEdit();
+      ANL=null;
+      cargarAdmin();
+    } else {
+      toast(r&&r.error||'Error al guardar.',true);
+    }
+  }).catch(function(){toast('Error de conexión.',true);});
+}
+
+// ===== TRANSPORT =====
+// Timeout de seguridad: si google.script.run no responde (p.ej. falla la
+// serialización del retorno), la promesa nunca resolvería y la app quedaría
+// atascada en "Cargando…". El timeout la rechaza y deja continuar en offline.
+function callBackend(payload){
+  return new Promise(function(resolve,reject){
+    var listo=false;
+    var to=setTimeout(function(){
+      if(listo)return;listo=true;
+      reject(new Error('Tiempo de espera agotado'));
+    },15000);
+    function ok(r){if(listo)return;listo=true;clearTimeout(to);resolve(r);}
+    function fail(e){if(listo)return;listo=true;clearTimeout(to);reject(e);}
+    if(typeof google!=='undefined'&&google.script&&google.script.run){
+      google.script.run.withSuccessHandler(ok).withFailureHandler(fail).apiCall(payload);
+    } else {
+      var ep=leer('ssop_endpoint','')||ENDPOINT_DEFAULT;
+      if(!ep){fail(new Error('Sin endpoint'));return;}
+      /* Content-Type DEBE ser text/plain.
+         Con 'application/json' el navegador manda antes una petición OPTIONS
+         de verificación previa (preflight CORS), y Apps Script no responde a
+         OPTIONS — no existe doOptions. Eso dejaba inservible todo este camino
+         cuando el HTML se sirve desde otro dominio.
+         text/plain es de los tipos que CORS considera "petición simple", así
+         que se salta el preflight. doPost recibe el cuerpo igual en
+         e.postData.contents, y JSON.parse no nota la diferencia. */
+      fetch(ep,{method:'POST',
+                headers:{'Content-Type':'text/plain;charset=utf-8'},
+                body:JSON.stringify(payload)})
+        .then(function(r){return r.json();}).then(ok).catch(fail);
+    }
+  });
+}
+
+// ===== UTILS =====
+function leer(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
+function guardar(k,v){try{if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function el(id){return document.getElementById(id);}
+function elv(id){var e=el(id);return e?e.value:'';}
+function show(id){var e=el(id);if(e)e.classList.remove('oculto');}
+function ocul(id){var e=el(id);if(e)e.classList.add('oculto');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function uuid(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});}
+var _tt;
+/* Los errores YA NO se auto-descartan: quien necesita más tiempo para leer
+   perdía el mensaje a los 3.5 s. Los avisos de éxito duran 6 s y en ambos
+   casos se puede descartar tocando. HIG Accesibilidad > Cognitivo. */
+function toast(msg,err){
+  clearTimeout(_tt);
+  var t=el('toast');
+  t.innerHTML='';
+  var texto=document.createElement('span');
+  texto.textContent=msg;
+  t.appendChild(texto);
+  var x=document.createElement('button');
+  x.type='button';x.className='t-x';x.setAttribute('aria-label','Descartar aviso');
+  x.textContent='×';
+  t.appendChild(x);
+  t.className=(err?'err ':'')+'visible';
+  // role=alert para errores: interrumpe y se anuncia de inmediato.
+  t.setAttribute('role',err?'alert':'status');
+  if(!err)_tt=setTimeout(ocultarToast,6000);
+}
+function ocultarToast(){clearTimeout(_tt);var t=el('toast');t.className='';t.textContent='';}
+
+var GLIFO_SYNC={spin:'◐',err:'✕',ok:'●'};
+function setSyncStatus(s,txt){
+  el('syncTxt').textContent=txt;
+  var d=el('syncDot');
+  d.className='dot'+(s==='spin'?' spin':s==='err'?' err':'');
+  d.textContent=GLIFO_SYNC[s]||GLIFO_SYNC.ok;   // forma además de color
+}
+
+function copiarFolio(){
+  var f=(el('vEnviadoFolio').textContent||'').trim();
+  if(!f||f==='—'){toast('Todavía no hay folio.',true);return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(f).then(function(){toast('Folio copiado: '+f);})
+      .catch(function(){toast('No se pudo copiar. Anótalo: '+f,true);});
+  } else toast('Copia el folio a mano: '+f);
+}
+
+/* ===== DIÁLOGOS ACCESIBLES =====
+   Los tres overlays eran <div> sin rol: el lector de pantalla seguía leyendo
+   la página de atrás, el foco se escapaba del diálogo, Escape no cerraba y el
+   fondo seguía haciendo scroll. */
+var _pilaModal=[];
+function abrirModal(id,focoSel){
+  var m=el(id);if(!m)return;
+  // Si ya está en la pila (reapertura o doble toque) NO se apila otra vez:
+  // al cerrar solo se sacaría una entrada y el bloqueo de scroll del fondo
+  // se quedaría puesto para siempre.
+  var yaEsta=false;
+  for(var i=0;i<_pilaModal.length;i++)if(_pilaModal[i].id===id){yaEsta=true;break;}
+  if(!yaEsta)_pilaModal.push({id:id,previo:document.activeElement});
+  m.classList.remove('oculto');
+  document.body.classList.add('modal-abierto');
+  setTimeout(function(){
+    var f=focoSel?m.querySelector(focoSel):null;
+    (f||primerFoco(m)||m).focus();
+  },50);
+}
+function cerrarModal(id){
+  var m=el(id);if(!m)return;
+  m.classList.add('oculto');
+  for(var i=_pilaModal.length-1;i>=0;i--){
+    if(_pilaModal[i].id===id){
+      var previo=_pilaModal[i].previo;
+      _pilaModal.splice(i,1);
+      if(previo&&previo.focus)setTimeout(function(){previo.focus();},0);
+      break;
+    }
+  }
+  if(!_pilaModal.length)document.body.classList.remove('modal-abierto');
+}
+var SEL_FOCO='a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),'+
+             'textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+function focusables(m){
+  return Array.prototype.filter.call(m.querySelectorAll(SEL_FOCO),function(e){
+    return e.offsetWidth||e.offsetHeight||e.getClientRects().length;
+  });
+}
+function primerFoco(m){return focusables(m)[0];}
+
+document.addEventListener('keydown',function(e){
+  if(!_pilaModal.length)return;
+  var actual=_pilaModal[_pilaModal.length-1];
+  var m=el(actual.id);
+  if(!m||m.classList.contains('oculto'))return;
+  if(e.key==='Escape'){
+    e.preventDefault();
+    if(actual.id==='vAdmin')cerrarAdmin();
+    else if(actual.id==='modalEdit')cerrarEdit();
+    else if(actual.id==='vAcuse')cerrarAcuse();
+    else if(actual.id==='modalConfirm')resolverConfirm(false);
+    else cerrarModal(actual.id);
+    return;
+  }
+  if(e.key!=='Tab')return;
+  var f=focusables(m);
+  if(!f.length)return;
+  var pri=f[0],ult=f[f.length-1];
+  if(e.shiftKey&&document.activeElement===pri){e.preventDefault();ult.focus();}
+  else if(!e.shiftKey&&document.activeElement===ult){e.preventDefault();pri.focus();}
+  else if(!m.contains(document.activeElement)){e.preventDefault();pri.focus();}
+});
+
+/* ===== CONFIRMACIÓN =====
+   Sustituye a confirm()/prompt() del navegador (que Apps Script bloquea en
+   algunos contextos y que no respeta la identidad visual) y cubre el hueco
+   real: acciones irreversibles que se disparaban con un solo toque. */
+var _resolverConfirm=null;
+function confirmar(op){
+  return new Promise(function(res){
+    _resolverConfirm=res;
+    var wrap=el('modalConfirm');
+    el('cfTitulo').textContent=op.titulo||'¿Confirmas?';
+    el('cfCuerpo').innerHTML=op.cuerpo||'';
+    var ok=el('cfOk');
+    ok.textContent=op.ok||'Confirmar';
+    ok.className='btn'+(op.peligro?' cf-peligro':'');
+    el('cfCancelar').textContent=op.cancelar||'Cancelar';
+    var campo=el('cfCampoWrap');
+    campo.classList.toggle('oculto',!op.pedirMotivo);
+    el('cfCampo').value='';
+    if(op.pedirMotivo)el('cfCampoLbl').textContent=op.pedirMotivo;
+    wrap.dataset.pedirMotivo=op.pedirMotivo?'1':'';
+    abrirModal('modalConfirm',op.pedirMotivo?'#cfCampo':'#cfCancelar');
+  });
+}
+function resolverConfirm(ok){
+  var wrap=el('modalConfirm');
+  var motivo=el('cfCampo').value.trim();
+  if(ok&&wrap.dataset.pedirMotivo&&!motivo){
+    toast('Escribe el motivo para continuar.',true);
+    el('cfCampo').focus();
+    return;
+  }
+  cerrarModal('modalConfirm');
+  var r=_resolverConfirm;_resolverConfirm=null;
+  if(r)r(ok?(wrap.dataset.pedirMotivo?motivo:true):false);
+}
+</script>
+</body>
+</html>
