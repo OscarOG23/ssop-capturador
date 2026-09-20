@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<!-- Sin maximum-scale: bloquear el zoom impide ampliar el texto (WCAG 1.4.4 / HIG Accesibilidad
+     "permite ampliar el texto al menos 200%"). viewport-fit=cover + env(safe-area-*) para el notch. -->
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SSOP · Panel de Administración</title>
+<link rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap"></noscript>
+<style>
+/* ── DESIGN TOKENS ─────────────────────────────────── */
+:root{
+  color-scheme:light dark;
+  /* Brand — el oro institucional (--o) es un color de RELLENO/BORDE.
+     Como TEXTO no alcanza 4.5:1 (2.64:1 sobre --op), por eso existe --o-tx. */
+  --g:  #8A1E32; --gd: #6E1727; --gl: #A8263D; --gxl: #F9ECF0;
+  --o:  #B78D55; --ol: #D4B483; --op: #F5EFE5;
+  --o-tx:#7D6030;            /* oro legible: 5.12:1 sobre --op, 5.85:1 sobre blanco */
+  --o-gr:#9C7742;            /* oro para gráficas/sparklines: 4.09:1 sobre blanco */
+  /* Neutrals */
+  --ink:#1A1614; --ink2:#2D2926; --mu:#6B7280;
+  --mu2:#6E7480;             /* antes #9CA3AF = 2.54:1 (ilegible). Ahora 4.69:1 */
+  --bd:#E8E3DD; --bd2:#F0ECE7; --pa:#FAF9F7; --wh:#FFFFFF;
+  --sombra:26,22,20;         /* rgb base de las sombras, para poder invertirla en oscuro */
+  /* Semantic */
+  --ve:#166534; --ve-bg:#DCFCE7;
+  --am:#92400E; --am-bg:#FEF3C7;
+  --am-fill:#A6480A;         /* amarillo del semáforo: blanco encima da 5.91:1 (antes #D97706 = 3.19:1) */
+  --ro:#9B1C2E; --ro-bg:#FFE4E6;
+  --info:#1D4ED8; --info-bg:#DBEAFE;
+  --sev-tx:#565C68;          /* 5.71:1 sobre --bd2 */
+  /* Rellenos del semáforo: color de FONDO con texto blanco encima.
+     Se mantienen oscuros en ambos modos (>=4.5:1 con blanco). */
+  --ve-fill:#166534; --ro-fill:#9B1C2E; --gris-fill:#5B6270;
+  /* Barras de avance: NO llevan texto encima, solo deben separarse de su
+     pista (>=3:1). En oscuro pueden ser claras; los chips no. */
+  --bar-ve:#166534; --bar-am:#A6480A; --bar-ro:#9B1C2E; --bar-gris:#5B6270;
+  /* Shadows */
+  --s0:0 1px 2px rgba(var(--sombra),.05);
+  --s1:0 1px 4px rgba(var(--sombra),.07),0 2px 8px rgba(var(--sombra),.04);
+  --s2:0 4px 16px rgba(var(--sombra),.09),0 2px 6px rgba(var(--sombra),.04);
+  --s3:0 8px 32px rgba(var(--sombra),.12),0 4px 12px rgba(var(--sombra),.06);
+  --s4:0 20px 60px rgba(var(--sombra),.18),0 8px 20px rgba(var(--sombra),.1);
+  /* Motion */
+  --eo:cubic-bezier(0.16,1,0.3,1);
+  --tf:150ms; --tm:250ms; --ts:400ms;
+  /* Radius */
+  --r1:6px; --r2:10px; --r3:14px; --r4:20px; --rf:9999px;
+  /* Área táctil mínima (HIG móvil: 44pt recomendado, 28pt mínimo absoluto) */
+  --tap:44px;
+}
+
+
+/* ── RESET ──────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:focus-visible{outline:2px solid var(--g);outline-offset:2px;border-radius:2px}
+body{
+  font-family:'Montserrat',system-ui,sans-serif;
+  background:var(--pa);
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.6;
+  padding-bottom:calc(48px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;
+}
+.oculto{display:none!important}
+/* Bloquea el scroll del fondo mientras hay un diálogo abierto */
+body.modal-abierto{overflow:hidden}
+
+/* Oculto a la vista pero presente para lector de pantalla y foco de teclado.
+   No usar display:none en controles reales: los saca del árbol de accesibilidad. */
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+
+/* ── MOTION: respeto global a "reducir movimiento" ───
+   Antes solo se desactivaba la animación del acordeón; el pulso del indicador
+   de sincronización, las barras del semáforo y los levantamientos en hover
+   seguían moviéndose. HIG Accesibilidad > Cognitivo. */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.001ms!important;
+    scroll-behavior:auto!important;
+  }
+  .sync .dot.spin{animation:none;opacity:1}
+}
+/* Los levantamientos en hover solo donde hay puntero real: en táctil el
+   estado :hover se queda "pegado" tras el toque. */
+@media(hover:none){
+  .btn:hover,.btn-enviar:hover,.btn-ctl:hover,.anl-fila:hover,
+  .smf-item:hover,.admin-link a:hover{transform:none!important}
+}
+
+
+/* ── HEADER ─────────────────────────────────────────── */
+header{
+  background:linear-gradient(135deg,var(--gd) 0%,var(--g) 55%,var(--gl) 100%);
+  color:#fff;
+  padding:0 16px;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 16px rgba(110,23,39,.4);
+  border-bottom:2px solid rgba(183,141,85,.35);
+}
+.hdr{
+  display:flex;justify-content:space-between;align-items:center;
+  height:56px;max-width:640px;margin:0 auto;
+}
+.htit .h1{font-size:15px;font-weight:800;letter-spacing:.1px}
+.htit .h2{font-size:11px;font-weight:500;opacity:.88;letter-spacing:.4px;margin-top:1px}
+.sync{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:600;
+  background:rgba(255,255,255,.18);
+  border:1px solid rgba(255,255,255,.32);
+  border-radius:var(--rf);
+  padding:5px 12px;letter-spacing:.2px;flex-shrink:0;
+}
+/* El punto lleva forma además de color (● en línea, ✕ error, ◐ sincronizando)
+   y el texto contiguo dice el estado: no depende del color. */
+.sync .dot{
+  width:14px;height:14px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:800;color:#3B1420;background:#6EE7B7;
+}
+.sync .dot.err{background:#FCA5A5}
+.sync .dot.spin{background:var(--ol);animation:pulse .9s ease-in-out infinite alternate}
+@keyframes pulse{to{opacity:.35}}
+
+
+/* ── LABELS + INPUTS ────────────────────────────────── */
+/* Etiquetas en caja alta y 11px: es el texto que más se lee en un formulario
+   de captura y era el menos legible. Caja normal, 13px y peso 600 conservan la
+   jerarquía sin gritar. HIG Tipografía > Legibilidad; Contenido > usa caja normal. */
+label{
+  display:block;font-size:13px;font-weight:600;
+  letter-spacing:0;
+  margin-bottom:6px;margin-top:18px;color:var(--gd);
+  line-height:1.45;
+}
+select,input[type=text],input[type=number],input[type=password],input[type=month],input[type=date],textarea{
+  width:100%;border:1.5px solid var(--bd);border-radius:var(--r2);
+  padding:11px 14px;font-size:16px;/* <16px provoca zoom automático en iOS al enfocar */
+  font-family:inherit;font-weight:500;
+  min-height:var(--tap);
+  background:var(--wh);color:var(--ink);outline:none;
+  transition:border-color var(--tf) var(--eo),box-shadow var(--tf) var(--eo);
+  -webkit-appearance:none;
+  appearance:none;
+}
+/* Campo con error: además del color, un borde grueso y un mensaje de texto.
+   HIG Color > "no dependas solo del color para comunicar información". */
+.campo-error input,.campo-error select,.campo-error textarea{
+  border-color:var(--ro);border-width:2px;
+}
+.msg-error{
+  display:flex;align-items:flex-start;gap:6px;
+  font-size:12px;font-weight:600;color:var(--ro);margin-top:6px;line-height:1.4;
+}
+select:focus,input:focus,textarea:focus{
+  border-color:var(--g);box-shadow:0 0 0 3px rgba(138,30,50,.1);
+}
+textarea{resize:vertical;min-height:80px;line-height:1.6}
+
+
+.btn{
+  width:100%;padding:13px;min-height:var(--tap);
+  background:linear-gradient(135deg,var(--gd),var(--g));
+  color:#fff;border:none;border-radius:var(--r3);
+  font-size:16px;font-weight:700;letter-spacing:.2px;
+  cursor:pointer;font-family:inherit;margin-top:20px;
+  box-shadow:0 4px 16px rgba(138,30,50,.3);
+  transition:box-shadow var(--tm) var(--eo),transform var(--tm) var(--eo),background var(--tm) var(--eo);
+}
+.btn:hover{box-shadow:0 6px 24px rgba(138,30,50,.42);transform:translateY(-1px)}
+.btn:active{background:var(--gd);transform:none;box-shadow:none}
+.btn:disabled{background:var(--mu);box-shadow:none;cursor:not-allowed;transform:none;opacity:.85}
+/* Botón secundario: misma altura táctil, jerarquía visual menor. */
+.btn-sec{
+  width:100%;padding:13px;min-height:var(--tap);
+  background:var(--wh);color:var(--gd);
+  border:1.5px solid var(--bd);border-radius:var(--r3);
+  font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;
+  transition:background var(--tf) var(--eo),border-color var(--tf) var(--eo);
+}
+.btn-sec:hover{background:var(--gxl);border-color:var(--g)}
+
+.avance-tit{
+  font-weight:800;font-size:14px;letter-spacing:.2px;
+  color:var(--gd);margin-bottom:16px;
+  display:flex;align-items:center;gap:10px;
+}
+.avance-tit::after{content:'';flex:1;height:1px;background:var(--bd)}
+
+.admin-overlay{
+  position:fixed;inset:0;
+  background:rgba(10,6,4,.65);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  z-index:200;display:flex;flex-direction:column;overflow-y:auto;
+}
+
+.btn-ctl{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:8px 16px;min-height:var(--tap);border:none;border-radius:var(--r2);
+  font-size:14px;font-weight:700;letter-spacing:.1px;
+  cursor:pointer;font-family:inherit;
+  transition:filter var(--tf) var(--eo),transform var(--tf) var(--eo);
+}
+/* rojo/verde SOLO para cerrar/abrir recepción. Cualquier otra acción usa
+   .accion (guinda) o .reload (neutra). */
+.btn-ctl.cerrar{background:var(--ro-bg);color:var(--ro)}
+.btn-ctl.abrir{background:var(--ve-bg);color:var(--ve)}
+.btn-ctl.accion{background:var(--gxl);color:var(--gd);border:1px solid rgba(138,30,50,.28)}
+.btn-ctl.reload{background:var(--pa);color:var(--ink2);border:1px solid var(--bd)}
+.btn-ctl.btn-mini{padding:5px 12px;font-size:13px;min-height:36px}
+.btn-ctl:hover{filter:brightness(.93);transform:translateY(-1px)}
+.btn-ctl:disabled{opacity:.5;cursor:not-allowed;transform:none;filter:none}
+
+.smf-dot{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:16px;height:16px;padding:0 4px;border-radius:var(--rf);
+  vertical-align:middle;margin-left:5px;
+  font-size:11px;font-weight:800;color:#fff;letter-spacing:0;
+}
+.smf-dot.verde{background:var(--ve-fill)}
+.smf-dot.amarillo{background:var(--am-fill)}
+.smf-dot.rojo{background:var(--ro-fill)}
+.smf-dot.gris{background:var(--gris-fill)}
+
+/* ── TOAST ──────────────────────────────────────────── */
+/* Toca para descartar. Los errores ya no se auto-descartan: desaparecer solo
+   tras 3.5 s es "elemento con temporizador" y se pierde justo cuando alguien
+   necesita más tiempo para leerlo. HIG Accesibilidad > Cognitivo. */
+#toast{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(24px + env(safe-area-inset-bottom));
+  background:var(--ink2);color:#fff;padding:14px 20px;border-radius:var(--r3);
+  font-size:14px;font-weight:600;display:none;z-index:500;
+  max-width:min(92%,520px);text-align:left;box-shadow:var(--s3);letter-spacing:.1px;
+  cursor:pointer;border:1px solid rgba(255,255,255,.14);
+  display:none;align-items:center;gap:12px;line-height:1.45;
+}
+#toast.visible{display:flex}
+#toast.err{background:#7F1524;border-color:rgba(255,255,255,.22)}
+#toast .t-x{
+  flex-shrink:0;font-size:18px;line-height:1;opacity:.75;font-weight:400;
+  background:none;border:none;color:inherit;cursor:pointer;padding:4px 2px;
+}
+#toast .t-x:hover{opacity:1}
+
+
+.modal-sheet{
+  background:var(--wh);border-radius:var(--r4);padding:28px;
+  margin:80px auto auto;width:90%;max-width:400px;box-shadow:var(--s4);
+}
+
+/* ── CONFIRMACIÓN ───────────────────────────────────── */
+.cf-sheet{margin:auto;max-width:440px}
+.admin-overlay:has(.cf-sheet){align-items:center;justify-content:center;padding:16px}
+.cf-titulo{font-size:19px;font-weight:800;color:var(--ink);margin-bottom:10px;letter-spacing:-.2px}
+.cf-cuerpo{font-size:15px;color:var(--ink2);line-height:1.65}
+.cf-cuerpo ul{margin:12px 0 0;padding-left:20px}
+.cf-cuerpo li{margin-bottom:5px}
+.cf-cuerpo .cf-dato{
+  display:flex;justify-content:space-between;gap:12px;
+  padding:8px 12px;background:var(--pa);border:1px solid var(--bd2);
+  border-radius:var(--r1);margin-top:6px;font-size:14px;
+}
+.cf-cuerpo .cf-dato b{color:var(--gd);font-weight:800}
+.cf-aviso{
+  margin-top:14px;padding:12px 14px;border-left:3px solid var(--am);
+  background:var(--am-bg);color:var(--am);border-radius:0 var(--r1) var(--r1) 0;
+  font-size:14px;font-weight:600;line-height:1.55;
+}
+.cf-acciones{display:flex;gap:10px;margin-top:22px}
+.cf-acciones .btn,.cf-acciones .btn-sec{margin-top:0;flex:1}
+.btn.cf-peligro{background:linear-gradient(135deg,#7F1524,var(--ro));box-shadow:0 4px 16px rgba(155,28,46,.32)}
+
+
+.admin-panel{
+  background:var(--wh);width:100%;max-width:720px;
+  margin:0 auto;min-height:100%;padding:24px 18px 48px;
+}
+.admin-hdr{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--bd2);
+  position:sticky;top:0;z-index:10;
+  background:var(--wh);margin-left:-18px;margin-right:-18px;padding-left:18px;padding-right:18px;
+  padding-top:16px;
+}
+.admin-hdr-icon{
+  width:36px;height:36px;background:var(--gxl);border-radius:var(--r2);
+  display:flex;align-items:center;justify-content:center;color:var(--g);flex-shrink:0;
+}
+.admin-hdr h2{flex:1;font-size:17px;font-weight:800;color:var(--g);letter-spacing:-.3px}
+.icon-btn{
+  background:var(--pa);border:1px solid var(--bd);border-radius:var(--r2);
+  cursor:pointer;width:var(--tap);height:var(--tap);flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--ink2);transition:background var(--tf) var(--eo),color var(--tf) var(--eo);
+}
+.icon-btn:hover{background:var(--bd);color:var(--ink)}
+
+.admin-login{max-width:340px;margin:48px auto}
+.admin-login h3{font-size:18px;font-weight:800;color:var(--g);margin-bottom:16px;letter-spacing:-.2px}
+
+.periodo-sel-wrap{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.periodo-sel-wrap label{
+  font-weight:700;font-size:13px;white-space:nowrap;color:var(--gd);
+  margin:0;letter-spacing:0;
+}
+.periodo-sel-wrap input{flex:1;max-width:180px}
+
+
+.admin-ctl{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+
+.admin-estado{
+  font-size:12px;font-weight:800;letter-spacing:.3px;
+  padding:6px 16px;border-radius:var(--rf);display:inline-block;margin-bottom:14px;
+}
+.admin-estado.abierto{color:var(--ve);background:var(--ve-bg)}
+.admin-estado.cerrado{color:var(--ro);background:var(--ro-bg)}
+
+.admin-stats{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.admin-stat{
+  background:var(--pa);border:1px solid var(--bd2);border-radius:var(--r2);
+  padding:12px 16px;font-size:13px;font-weight:600;color:var(--ink2);
+  flex:1;min-width:80px;
+}
+.admin-stat strong{display:block;font-size:22px;font-weight:800;color:var(--g);margin-bottom:2px}
+
+
+/* ── TABLE ──────────────────────────────────────────── */
+.admin-tbl-wrap{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--bd)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{
+  background:var(--g);color:#fff;padding:10px 8px;
+  text-align:center;font-size:12px;font-weight:700;letter-spacing:.2px;
+  position:sticky;top:0;white-space:nowrap;
+}
+th:first-child{text-align:left;padding-left:12px}
+td{padding:11px 8px;border-bottom:1px solid var(--bd2);text-align:center;color:var(--ink2)}
+td:first-child{text-align:left;font-size:13px;font-weight:600;padding-left:12px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--gxl)}
+
+/* ===== Panel analítico (pestañas Análisis / Cierre) ===== */
+.admin-tabs{display:flex;gap:2px;border-bottom:2px solid var(--bd);margin:0 0 16px}
+.admin-tab{
+  flex:1;padding:11px 8px;min-height:var(--tap);
+  background:none;border:none;border-bottom:3px solid transparent;
+  font-family:inherit;font-size:13px;font-weight:600;color:var(--mu);cursor:pointer;
+  transition:color var(--tf) var(--eo),border-color var(--tf) var(--eo);
+}
+.admin-tab:hover{color:var(--ink2)}
+.admin-tab.activa{color:var(--g);border-bottom-color:var(--g);font-weight:800}
+.anl-fila{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:12px 14px;border:1px solid var(--bd);border-radius:var(--r2);
+  margin-bottom:8px;cursor:pointer;background:var(--wh);box-shadow:var(--s0);
+  width:100%;text-align:left;font-family:inherit;min-height:var(--tap);
+  transition:box-shadow var(--tf) var(--eo),border-color var(--tf) var(--eo);
+}
+/* Nombre del promotor dentro de la tabla: era un <td onclick>, sin foco.
+   Ahora es un botón que ocupa la celda. */
+.celda-editar{
+  background:none;border:none;font-family:inherit;font-size:inherit;
+  font-weight:inherit;color:inherit;text-align:left;cursor:pointer;
+  padding:2px 0;min-height:36px;width:100%;
+}
+.celda-editar:hover{text-decoration:underline}
+.anl-fila:hover{box-shadow:var(--s1);border-color:var(--ol)}
+.anl-fila.critica{border-left:3px solid var(--ro)}
+.anl-nombre{font-size:14px;font-weight:700;color:var(--ink);line-height:1.3}
+.anl-unidad{font-size:12px;color:var(--mu);line-height:1.3}
+.anl-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+.anl-chip{font-size:12px;font-weight:600;padding:4px 10px;border-radius:var(--rf);white-space:nowrap}
+.anl-chip.alta{background:var(--ro-bg);color:var(--ro)}
+.anl-chip.baja{background:var(--am-bg);color:var(--am)}
+.anl-chip.info{background:var(--op);color:var(--o-tx)}
+.anl-delta{font-size:12px;font-weight:700;color:var(--ro)}
+.anl-spark{display:flex;align-items:flex-end;gap:2px;height:22px}
+.anl-spark i{display:block;width:5px;background:var(--o-gr);border-radius:1px;min-height:2px}
+.anl-spark i.ult{background:var(--g)}
+.anl-muertos{
+  margin-top:18px;padding:12px 14px;border-left:3px solid var(--mu);
+  background:var(--pa);border-radius:0 var(--r1) var(--r1) 0;font-size:12px;line-height:1.6;color:var(--ink2);
+}
+.anl-muertos strong{display:block;color:var(--ink2);margin-bottom:4px;font-size:13px}
+.anl-det{
+  border:1px solid var(--ol);border-radius:var(--r2);padding:16px;
+  margin-bottom:14px;background:var(--wh);box-shadow:var(--s2);
+}
+.anl-det h3{font-size:15px;color:var(--g);margin:0 0 2px}
+.anl-vacio{font-size:13px;color:var(--ink2);padding:16px 0;text-align:center}
+.ofi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:8px}
+.ofi-grid label{font-size:12px;color:var(--ink2);display:flex;flex-direction:column;gap:2px;font-weight:600}
+.ofi-grid input{padding:8px;font-size:16px;min-height:40px;border:1px solid var(--bd);border-radius:var(--r1);width:100%}
+/* Cada punto lleva además una letra (V/A/R/—) para no depender del color. */
+
+.modal-hdr{display:flex;align-items:center;margin-bottom:20px}
+.modal-hdr h3{flex:1;font-size:16px;font-weight:800;color:var(--g);letter-spacing:-.2px}
+.modal-sub{font-size:13px;color:var(--mu);margin-bottom:14px;font-weight:500}
+
+.sev{font-size:11px;font-weight:800;letter-spacing:.2px;padding:4px 10px;border-radius:var(--rf);white-space:nowrap}
+.sev-alta{background:var(--ro-bg);color:var(--ro)}
+.sev-media{background:var(--am-bg);color:var(--am)}
+.sev-baja{background:var(--bd2);color:var(--sev-tx)}   /* antes --mu sobre --bd2 = 4.11:1 */
+.sev-informativa{background:var(--info-bg);color:var(--info)}
+
+  .hdr{height:52px}
+
+  .admin-stat strong{font-size:18px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <div class="htit">
+      <div class="h1">SSOP · Panel de Administración</div>
+      <div class="h2">JS XIX Texcoco &nbsp;·&nbsp; ISEM</div>
+    </div>
+    <div class="sync" role="status" aria-live="polite">
+      <span id="syncDot" class="dot spin" aria-hidden="true">◐</span>
+      <span id="syncTxt">Cargando…</span>
+    </div>
+  </div>
+</header>
+
+<div class="admin-panel">
+  <div class="admin-hdr">
+    <div class="admin-hdr-icon">
+      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </div>
+    <h2 id="adminTitulo">Panel de Administrador</h2>
+    <a href="index.html" id="lnkCapturador" class="icon-btn" target="_top" aria-label="Volver al capturador" title="Volver al capturador">
+      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    </a>
+  </div>
+
+  <div id="adminLogin">
+    <div class="admin-login">
+      <h3>Acceso Administrador</h3>
+      <label for="adminPass">Contraseña</label>
+      <input type="password" id="adminPass" autocomplete="current-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')loginAdmin()">
+      <button type="button" class="btn" onclick="loginAdmin()">Entrar</button>
+    </div>
+  </div>
+
+  <div id="adminDash" class="oculto">
+    <div class="periodo-sel-wrap">
+      <label for="adminPeriodo">Período:</label>
+      <input type="month" id="adminPeriodo" onchange="cargarAdmin()">
+    </div>
+
+    <div class="admin-tabs" role="tablist" aria-label="Vistas del panel">
+      <button type="button" class="admin-tab activa" role="tab" data-tab="recepcion" aria-selected="true" tabindex="0" onclick="cambiarTabAdmin('recepcion')">Recepci&oacute;n</button>
+      <button type="button" class="admin-tab" role="tab" data-tab="analisis" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('analisis')">An&aacute;lisis</button>
+      <button type="button" class="admin-tab" role="tab" data-tab="cierre" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('cierre')">Cierre y env&iacute;o</button>
+      <button type="button" class="admin-tab" role="tab" data-tab="historico" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('historico')">Hist&oacute;rico</button>
+    </div>
+
+    <div id="tabRecepcion" class="admin-tab-panel">
+    <div id="adminEstadoBadge" class="admin-estado abierto" role="status">Recepción abierta</div>
+    <div class="admin-ctl">
+      <button type="button" class="btn-ctl cerrar" id="btnCerrar" onclick="setPeriodo('cerrado')">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Cerrar recepción
+      </button>
+      <button type="button" class="btn-ctl abrir" id="btnAbrir" onclick="setPeriodo('abierto')">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+        Abrir recepción
+      </button>
+      <button type="button" class="btn-ctl reload" onclick="cargarAdmin()">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Actualizar
+      </button>
+    </div>
+    <div class="admin-stats" id="adminStats"></div>
+    <div class="admin-tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="min-width:130px">Promotor</th>
+            <th>Unidad</th><th>TVF</th><th>T.PS</th>
+            <th>Adics</th><th>Mural</th><th>Cron</th><th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="adminTbody"></tbody>
+      </table>
+    </div>
+
+    <!-- FASE 2: cotejo de tres vías -->
+    <div class="avance-tit" style="margin-top:26px">Alertas &middot; cotejo de tres v&iacute;as</div>
+    <div class="admin-ctl">
+      <button type="button" class="btn-ctl accion" onclick="ejecutarCotejo(event)">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Ejecutar cotejo
+      </button>
+      <button type="button" class="btn-ctl reload" onclick="cargarAlertas()">Actualizar alertas</button>
+    </div>
+    <div class="admin-stats" id="alertaStats"></div>
+    <div class="admin-tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="min-width:110px">Promotor</th>
+            <th>Detalle</th><th>Severidad</th><th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="alertaTbody"></tbody>
+      </table>
+    </div>
+    </div><!-- /tabRecepcion -->
+
+    <div id="tabAnalisis" class="admin-tab-panel oculto"></div>
+    <div id="tabCierre" class="admin-tab-panel oculto"></div>
+    <div id="tabHistorico" class="admin-tab-panel oculto"></div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PROMOTOR -->
+<div id="modalEdit" class="admin-overlay oculto" role="dialog" aria-modal="true" aria-labelledby="editTitulo" onclick="if(event.target===this)cerrarEdit()">
+  <div class="modal-sheet">
+    <div class="modal-hdr">
+      <h3 id="editTitulo">Editar Promotor</h3>
+      <button type="button" class="icon-btn" onclick="cerrarEdit()" aria-label="Cerrar y descartar los cambios">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-sub" id="editNombre"></div>
+
+    <div id="editBase" style="padding:10px 12px;background:var(--pa);border-left:3px solid var(--o);
+      border-radius:0 var(--r1) var(--r1) 0;font-size:13px;line-height:1.6;color:var(--ink2);margin-bottom:16px"></div>
+
+    <label for="editUnidad">Unidad operativa (rota cada trimestre)</label>
+    <input type="text" id="editUnidad" placeholder="Nombre de la unidad donde captura">
+    <label style="margin-top:12px" for="editClues">CLUES operativa</label>
+    <input type="text" id="editClues" placeholder="MCIMB000000">
+    <label style="margin-top:12px" for="editVigente">Vigente desde</label>
+    <input type="month" id="editVigente">
+    <div style="margin-top:18px;display:flex;align-items:center;gap:12px">
+      <span style="font-size:13px;font-weight:700;color:var(--gd)">Estado:</span>
+      <button type="button" id="editActivoBtn" onclick="toggleEditActivo()" style="padding:7px 18px;min-height:40px;border:none;border-radius:var(--rf);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit"></button>
+    </div>
+    <p style="font-size:13px;color:var(--ink2);margin-top:8px;line-height:1.6">Inactivo = no aparece en el men&uacute; de captura</p>
+    <div id="editRotaciones" style="margin-top:14px;font-size:13px;color:var(--ink2)"></div>
+    <button type="button" class="btn" style="margin-top:20px" onclick="guardarEditPromotor()">Guardar cambios</button>
+  </div>
+</div>
+
+
+<!-- CONFIRMACIÓN (sustituye a confirm()/prompt() del navegador) -->
+<div id="modalConfirm" class="admin-overlay oculto" role="dialog" aria-modal="true" aria-labelledby="cfTitulo">
+  <div class="modal-sheet cf-sheet">
+    <h3 id="cfTitulo" class="cf-titulo">¿Confirmas?</h3>
+    <div id="cfCuerpo" class="cf-cuerpo"></div>
+    <div id="cfCampoWrap" class="oculto">
+      <label id="cfCampoLbl" for="cfCampo">Motivo</label>
+      <textarea id="cfCampo" rows="3"></textarea>
+    </div>
+    <div class="cf-acciones">
+      <button type="button" id="cfCancelar" class="btn-sec" onclick="resolverConfirm(false)">Cancelar</button>
+      <button type="button" id="cfOk" class="btn" onclick="resolverConfirm(true)">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- aria-live: los avisos (incluido el folio del envio) eran invisibles para lector de pantalla -->
+<div id="toast" role="status" aria-live="polite" aria-atomic="true" onclick="ocultarToast()"></div>
+
+<script>
+/* Endpoint por defecto para cuando este HTML NO lo sirve Apps Script (p.ej.
+   hospedado en GitHub Pages). Sirve para que el promotor no tenga que
+   configurar nada: si está vacío se usa la clave 'ssop_endpoint' de
+   localStorage. Debe ser la URL /exec de la implementación.
+   Servido por Apps Script esto ni se usa: ahí manda google.script.run. */
+var ENDPOINT_DEFAULT = 'https://script.google.com/macros/s/AKfycbygXHFeDDQ2MWTwYoxN2xDd-RitXKUk6--xm3oltO4ZU-MtUVTbnkeEc9qHYgN3Y_8/exec';
+
+
+// ===== SVG ICONS (reutilizables en JS) =====
+var ICO_CHECK='<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+var ICO_PENCIL='<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+
+// ===== ESTADO =====
+var PERIODO='',adminKey='';
+
+// ===== INICIO =====
+// A diferencia del promotor, el admin no necesita catalogo/localStorage:
+// cada accion (admin_resumen, analitica, comparativo_enviado...) trae sus
+// propios datos al pedirla. Solo hace falta mostrar el login y enfocarlo.
+document.addEventListener('DOMContentLoaded',function(){
+  PERIODO=periodoActual();
+  el('adminPeriodo').value=PERIODO;
+  el('adminPass').focus();
+});
+
+document.addEventListener('keydown',function(e){
+  if(document.activeElement&&document.activeElement.classList&&
+     document.activeElement.classList.contains('admin-tab'))
+    navTabs(e,['recepcion','analisis','cierre','historico'].map(idTabAdmin),
+            function(b){cambiarTabAdmin(b.getAttribute('data-tab'));});
+});
+
+document.addEventListener('keydown',function(e){
+  if(!_pilaModal.length)return;
+  var actual=_pilaModal[_pilaModal.length-1];
+  var m=el(actual.id);
+  if(!m||m.classList.contains('oculto'))return;
+  if(e.key==='Escape'){
+    e.preventDefault();
+    if(actual.id==='modalEdit')cerrarEdit();
+    else if(actual.id==='modalConfirm')resolverConfirm(false);
+    else cerrarModal(actual.id);
+    return;
+  }
+  if(e.key!=='Tab')return;
+  var f=focusables(m);
+  if(!f.length)return;
+  var pri=f[0],ult=f[f.length-1];
+  if(e.shiftKey&&document.activeElement===pri){e.preventDefault();ult.focus();}
+  else if(!e.shiftKey&&document.activeElement===ult){e.preventDefault();pri.focus();}
+  else if(!m.contains(document.activeElement)){e.preventDefault();pri.focus();}
+});
+
+/* ===== CONFIRMACIÓN =====
+   Sustituye a confirm()/prompt() del navegador (que Apps Script bloquea en
+   algunos contextos y que no respeta la identidad visual) y cubre el hueco
+   real: acciones irreversibles que se disparaban con un solo toque. */
+var _resolverConfirm=null;
+
+/**
+ * Período por defecto al abrir la app. Regla de negocio: el mes M se sigue
+ * capturando/cerrando durante la primera quincena del mes M+1 (el reporte
+ * mensual se arma al finalizar el mes). Por eso, del día 1 al 14 el default
+ * sigue siendo el mes ANTERIOR; a partir del día 15 el default pasa a ser
+ * el mes actual. El selector de 12 meses siempre permite cambiar a mano
+ * (evita huecos/duplicidad), esto solo decide qué aparece preseleccionado.
+ */
+function periodoActual(){
+  var d=new Date();
+  var y=d.getFullYear(), m=d.getMonth(); // m: 0=enero
+  if(d.getDate()<15){
+    m-=1;
+    if(m<0){m=11;y-=1;}
+  }
+  return y+'-'+pad2(m+1);
+}
+function pad2(n){return String(n).padStart(2,'0');}
+
+function periodoLabel(p){
+  if(!p)return'';
+  var m=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var s=p.split('-');
+  return m[parseInt(s[1],10)-1]+' '+s[0];
+}
+
+// ===== CATÁLOGO =====
+
+function navTabs(e,lista,activar){
+  var i=lista.indexOf(document.activeElement.id);
+  if(i<0)return;
+  var d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:
+        e.key==='Home'?-999:e.key==='End'?999:0;
+  if(!d)return;
+  e.preventDefault();
+  var j=d===-999?0:d===999?lista.length-1:(i+d+lista.length)%lista.length;
+  var btn=el(lista[j]);
+  if(btn){btn.focus();activar(btn);}
+}
+
+var ETIQUETA_SMF={verde:'Meta cumplida',amarillo:'Cerca de la meta',rojo:'Por debajo de la meta',gris:'Sin captura'};
+var LETRA_SMF={verde:'V',amarillo:'A',rojo:'R',gris:'—',sin_meta:'—'};
+/* Punto de semáforo con letra + nombre accesible, en vez de solo color. */
+function dotSmf(col){
+  var c=LETRA_SMF[col]?col:'gris';
+  return '<span class="smf-dot '+c+'" role="img" aria-label="'+
+         (ETIQUETA_SMF[c]||'Sin meta')+'">'+LETRA_SMF[c]+'</span>';
+}
+
+// ===== HISTORIAL =====
+var HIST=[];
+var ICO_PRINT='<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
+
+
+function callBackend(payload){
+  return new Promise(function(resolve,reject){
+    var listo=false;
+    var to=setTimeout(function(){
+      if(listo)return;listo=true;
+      reject(new Error('Tiempo de espera agotado'));
+    },15000);
+    function ok(r){if(listo)return;listo=true;clearTimeout(to);resolve(r);}
+    function fail(e){if(listo)return;listo=true;clearTimeout(to);reject(e);}
+    if(typeof google!=='undefined'&&google.script&&google.script.run){
+      google.script.run.withSuccessHandler(ok).withFailureHandler(fail).apiCall(payload);
+    } else {
+      var ep=leer('ssop_endpoint','')||ENDPOINT_DEFAULT;
+      if(!ep){fail(new Error('Sin endpoint'));return;}
+      /* Content-Type DEBE ser text/plain.
+         Con 'application/json' el navegador manda antes una petición OPTIONS
+         de verificación previa (preflight CORS), y Apps Script no responde a
+         OPTIONS — no existe doOptions. Eso dejaba inservible todo este camino
+         cuando el HTML se sirve desde otro dominio.
+         text/plain es de los tipos que CORS considera "petición simple", así
+         que se salta el preflight. doPost recibe el cuerpo igual en
+         e.postData.contents, y JSON.parse no nota la diferencia. */
+      fetch(ep,{method:'POST',
+                headers:{'Content-Type':'text/plain;charset=utf-8'},
+                body:JSON.stringify(payload)})
+        .then(function(r){return r.json();}).then(ok).catch(fail);
+    }
+  });
+}
+
+// ===== UTILS =====
+
+function leer(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
+
+function guardar(k,v){try{if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+
+function el(id){return document.getElementById(id);}
+
+function elv(id){var e=el(id);return e?e.value:'';}
+
+function show(id){var e=el(id);if(e)e.classList.remove('oculto');}
+
+function ocul(id){var e=el(id);if(e)e.classList.add('oculto');}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function uuid(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});}
+var _tt;
+/* Los errores YA NO se auto-descartan: quien necesita más tiempo para leer
+   perdía el mensaje a los 3.5 s. Los avisos de éxito duran 6 s y en ambos
+   casos se puede descartar tocando. HIG Accesibilidad > Cognitivo. */
+
+function toast(msg,err){
+  clearTimeout(_tt);
+  var t=el('toast');
+  t.innerHTML='';
+  var texto=document.createElement('span');
+  texto.textContent=msg;
+  t.appendChild(texto);
+  var x=document.createElement('button');
+  x.type='button';x.className='t-x';x.setAttribute('aria-label','Descartar aviso');
+  x.textContent='×';
+  t.appendChild(x);
+  t.className=(err?'err ':'')+'visible';
+  // role=alert para errores: interrumpe y se anuncia de inmediato.
+  t.setAttribute('role',err?'alert':'status');
+  if(!err)_tt=setTimeout(ocultarToast,6000);
+}
+
+function ocultarToast(){clearTimeout(_tt);var t=el('toast');t.className='';t.textContent='';}
+
+var GLIFO_SYNC={spin:'◐',err:'✕',ok:'●'};
+
+function setSyncStatus(s,txt){
+  el('syncTxt').textContent=txt;
+  var d=el('syncDot');
+  d.className='dot'+(s==='spin'?' spin':s==='err'?' err':'');
+  d.textContent=GLIFO_SYNC[s]||GLIFO_SYNC.ok;   // forma además de color
+}
+
+
+/* ===== DIÁLOGOS ACCESIBLES =====
+   Los tres overlays eran <div> sin rol: el lector de pantalla seguía leyendo
+   la página de atrás, el foco se escapaba del diálogo, Escape no cerraba y el
+   fondo seguía haciendo scroll. */
+var _pilaModal=[];
+function abrirModal(id,focoSel){
+  var m=el(id);if(!m)return;
+  // Si ya está en la pila (reapertura o doble toque) NO se apila otra vez:
+  // al cerrar solo se sacaría una entrada y el bloqueo de scroll del fondo
+  // se quedaría puesto para siempre.
+  var yaEsta=false;
+  for(var i=0;i<_pilaModal.length;i++)if(_pilaModal[i].id===id){yaEsta=true;break;}
+  if(!yaEsta)_pilaModal.push({id:id,previo:document.activeElement});
+  m.classList.remove('oculto');
+  document.body.classList.add('modal-abierto');
+  setTimeout(function(){
+    var f=focoSel?m.querySelector(focoSel):null;
+    (f||primerFoco(m)||m).focus();
+  },50);
+}
+
+function cerrarModal(id){
+  var m=el(id);if(!m)return;
+  m.classList.add('oculto');
+  for(var i=_pilaModal.length-1;i>=0;i--){
+    if(_pilaModal[i].id===id){
+      var previo=_pilaModal[i].previo;
+      _pilaModal.splice(i,1);
+      if(previo&&previo.focus)setTimeout(function(){previo.focus();},0);
+      break;
+    }
+  }
+  if(!_pilaModal.length)document.body.classList.remove('modal-abierto');
+}
+var SEL_FOCO='a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),'+
+             'textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+
+function focusables(m){
+  return Array.prototype.filter.call(m.querySelectorAll(SEL_FOCO),function(e){
+    return e.offsetWidth||e.offsetHeight||e.getClientRects().length;
+  });
+}
+
+function primerFoco(m){return focusables(m)[0];}
+
+function confirmar(op){
+  return new Promise(function(res){
+    _resolverConfirm=res;
+    var wrap=el('modalConfirm');
+    el('cfTitulo').textContent=op.titulo||'¿Confirmas?';
+    el('cfCuerpo').innerHTML=op.cuerpo||'';
+    var ok=el('cfOk');
+    ok.textContent=op.ok||'Confirmar';
+    ok.className='btn'+(op.peligro?' cf-peligro':'');
+    el('cfCancelar').textContent=op.cancelar||'Cancelar';
+    var campo=el('cfCampoWrap');
+    campo.classList.toggle('oculto',!op.pedirMotivo);
+    el('cfCampo').value='';
+    if(op.pedirMotivo)el('cfCampoLbl').textContent=op.pedirMotivo;
+    wrap.dataset.pedirMotivo=op.pedirMotivo?'1':'';
+    abrirModal('modalConfirm',op.pedirMotivo?'#cfCampo':'#cfCancelar');
+  });
+}
+
+function resolverConfirm(ok){
+  var wrap=el('modalConfirm');
+  var motivo=el('cfCampo').value.trim();
+  if(ok&&wrap.dataset.pedirMotivo&&!motivo){
+    toast('Escribe el motivo para continuar.',true);
+    el('cfCampo').focus();
+    return;
+  }
+  cerrarModal('modalConfirm');
+  var r=_resolverConfirm;_resolverConfirm=null;
+  if(r)r(ok?(wrap.dataset.pedirMotivo?motivo:true):false);
+}
+
+function idTabAdmin(t){
+  var b=document.querySelector('.admin-tab[data-tab="'+t+'"]');
+  if(b&&!b.id)b.id='btnTabAdmin-'+t;
+  return b?b.id:'';
+}
+
+// ===== ACORDEÓN =====
+
+function abrirAdmin(){
+  show('adminLogin');
+  el('adminDash').classList.add('oculto');
+  el('adminPass').value='';
+  el('adminPeriodo').value=PERIODO;
+  abrirModal('vAdmin','#adminPass');
+}
+
+function cerrarAdmin(){cerrarModal('vAdmin');}
+
+
+function loginAdmin(){
+  adminKey=el('adminPass').value;
+  if(!adminKey){toast('Ingresa la contraseña.',true);return;}
+  cargarAdmin();
+}
+
+
+function cargarAdmin(){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  setSyncStatus('spin','Cargando…');
+  callBackend({action:'admin_resumen',periodo:periodo,key:adminKey}).then(function(r){
+    setSyncStatus('ok','En línea');
+    if(!r||!r.ok){toast(r&&r.error||'Contraseña incorrecta.',true);return;}
+    ocul('adminLogin');show('adminDash');
+    ADM=r;
+    renderAdminDash(r);
+    cargarAlertas();
+    // La analítica trae las metas locales: sin ella la tabla de Recepción se
+    // pinta sin semáforo (a propósito — el cliente ya no inventa metas).
+    cargarAnalitica();
+  }).catch(function(){setSyncStatus('err','Error');toast('Error de conexión.',true);});
+}
+
+
+function renderAdminDash(r){
+  var estado=r.estado||'abierto';
+  var eb=el('adminEstadoBadge');
+  eb.textContent=(estado==='cerrado'?'Recepción cerrada':'Recepción abierta');
+  eb.className='admin-estado '+estado;
+  el('btnCerrar').style.display=estado==='cerrado'?'none':'';
+  el('btnAbrir').style.display=estado!=='cerrado'?'none':'';
+
+  var rptMap={};
+  (r.reportes||[]).forEach(function(rep){rptMap[rep.promotor_clave]=rep;});
+  var proms=(r.promotores||[]).slice().sort(function(a,b){return(a.nombre||'').localeCompare(b.nombre||'');});
+  var total=proms.length,enviados=Object.keys(rptMap).length;
+  el('adminStats').innerHTML=
+    '<div class="admin-stat"><strong>'+total+'</strong>Promotores</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--ve)"><strong>'+enviados+'</strong>Enviados</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--ro)"><strong>'+(total-enviados)+'</strong>Pendientes</div>';
+
+  window._promMap={};
+  proms.forEach(function(p){window._promMap[p.clave]=p;});
+
+  el('adminTbody').innerHTML=proms.map(function(p){
+    var rep=rptMap[p.clave];
+    var activo=p.activo!=='0';
+    var nomStyle='cursor:pointer;'+(activo?'':'text-decoration:line-through;color:var(--mu);');
+    var estadoCell=!rep
+      ?'<td style="color:var(--ro);font-size:11px;font-weight:700">Pendiente</td>'
+      :'<td style="color:var(--ve);font-size:11px;font-weight:700">'+ICO_CHECK+' Enviado</td>';
+    var nomCell='<td style="'+nomStyle+'"><button type="button" class="celda-editar" '+
+      'data-clave="'+esc(p.clave)+'" onclick="abrirEditFromRow(this)" '+
+      'aria-label="Editar a '+esc(p.nombre||p.clave)+'">'+
+      esc(p.nombre||p.clave)+
+      (activo?'':' &#9940;')+
+      ' <span style="color:var(--o-tx)">'+ICO_PENCIL+'</span></button></td>';
+    if(!rep)return '<tr>'+nomCell+
+      '<td style="font-size:12px">'+(p.unidad||'—')+'</td>'+
+      '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>'+estadoCell+'</tr>';
+    return '<tr>'+nomCell+
+      '<td style="font-size:12px">'+(p.unidad||'—')+'</td>'+
+      tdMeta(rep.tvf,'TVF')+tdMeta(rep.talleres_ps,'TALLER_PS')+
+      tdMeta(rep.talleres_adicciones,'ADICCIONES')+
+      tdMeta(rep.periodicos_murales,'MURAL')+tdMeta(rep.cronogramas,null)+
+      estadoCell+'</tr>';
+  }).join('');
+}
+
+// ===== PANEL ANALÍTICO (pestañas Análisis / Cierre) =====
+var ANL=null;                 // último payload de la acción 'analitica'
+var ADM=null;                 // último payload de 'admin_resumen' (para repintar Recepción)
+var METAS_LOCALES={};         // {IND: meta_local} — única fuente de metas en el cliente
+
+
+function cambiarTabAdmin(tab){
+  ['recepcion','analisis','cierre','historico'].forEach(function(t){
+    var btn=document.querySelector('.admin-tab[data-tab="'+t+'"]');
+    if(btn){
+      var act=(t===tab);
+      btn.classList.toggle('activa',act);
+      btn.setAttribute('aria-selected',act?'true':'false');
+      btn.tabIndex=act?0:-1;
+    }
+    var panel=el('tab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(panel)panel.classList.toggle('oculto',t!==tab);
+  });
+  if(tab==='analisis'){ANL?renderAnalisis():cargarAnalitica();}
+  if(tab==='cierre'){ANL?renderCierre():cargarAnalitica();}
+  if(tab==='historico'){HIST?renderHistorico():cargarHistorico();}
+}
+
+// ---- Pestaña Histórico: DECLARADO vs CAPTURADO ----
+var HIST=null;
+
+
+function cargarHistorico(){
+  var anio=(el('adminPeriodo').value||PERIODO).substring(0,4);
+  setSyncStatus('spin','Cargando histórico…');
+  el('tabHistorico').innerHTML='<p class="anl-vacio">Cargando…</p>';
+  callBackend({action:'comparativo_enviado',anio:anio,key:adminKey}).then(function(r){
+    setSyncStatus('ok','En línea');
+    if(!r||!r.ok){toast((r&&r.error)||'Error al cargar el histórico.',true);return;}
+    HIST=r;renderHistorico();
+  }).catch(function(){setSyncStatus('err','Error');toast('Error de conexión.',true);});
+}
+
+
+function renderHistorico(){
+  if(!HIST)return;
+  if(!HIST.meses.length){
+    el('tabHistorico').innerHTML='<p class="anl-vacio">Sin datos de '+esc(HIST.anio)+'.<br>'+
+      'Siembra el histórico con <code>aplicarSiembraHistorico()</code> desde el editor.</p>';
+    return;
+  }
+
+  // Fila por mes: declarado, capturado y % de respaldo del indicador principal
+  var filas=HIST.meses.map(function(m){
+    var tvf=null;
+    m.indicadores.forEach(function(i){if(i.id==='TVF')tvf=i;});
+    var pct=tvf&&tvf.respaldo!==null?tvf.respaldo:null;
+    var col=pct===null?'gris':pct>=95?'verde':pct>=80?'amarillo':'rojo';
+    return '<tr>'+
+      '<td style="font-weight:600">'+esc(m.nombre)+'</td>'+
+      '<td>'+(tvf?tvf.declarado:0)+'</td>'+
+      '<td style="color:var(--o)">'+(tvf&&tvf.estimado?tvf.estimado:'—')+'</td>'+
+      '<td>'+(tvf?tvf.capturado:0)+'</td>'+
+      '<td style="font-weight:700;color:'+(tvf&&tvf.brecha<0?'var(--ro)':'var(--ve)')+'">'+
+        (tvf?(tvf.brecha>0?'+':'')+tvf.brecha:0)+'</td>'+
+      '<td>'+(pct===null?'—':pct+'%')+dotSmf(col)+'</td>'+
+      '<td style="font-size:12px;color:var(--mu)">'+m.promotores_declarados+' / '+m.promotores_capturados+
+        (m.promotores_estimados?' <span style="color:var(--o)">+'+m.promotores_estimados+' est</span>':'')+'</td>'+
+    '</tr>';
+  }).join('');
+
+  // Totales del año
+  var td=0,tc=0;
+  HIST.meses.forEach(function(m){
+    m.indicadores.forEach(function(i){if(i.id==='TVF'){td+=i.declarado;tc+=i.capturado;}});
+  });
+  var pctAnio=td>0?Math.round(tc/td*100):null;
+
+  el('tabHistorico').innerHTML=
+    '<div class="admin-stats">'+
+      '<div class="admin-stat"><strong>'+td+'</strong>TVF declarado</div>'+
+      '<div class="admin-stat" style="border-left:3px solid var(--o)"><strong>'+tc+'</strong>TVF capturado</div>'+
+      '<div class="admin-stat" style="border-left:3px solid '+(pctAnio!==null&&pctAnio<80?'var(--ro)':'var(--ve)')+'">'+
+        '<strong>'+(pctAnio===null?'—':pctAnio+'%')+'</strong>Respaldo</div>'+
+    '</div>'+
+    '<div class="anl-muertos" style="border-left-color:var(--o);margin-top:0;margin-bottom:12px">'+
+      '<strong>Declarado vs capturado</strong>'+
+      '<em>Declarado</em> es lo que se envió a la jurisdicción, congelado al momento del envío. '+
+      '<em>Capturado</em> es lo que los promotores reportaron en el sistema. '+
+      'El <em>respaldo</em> dice qué parte de lo que firmaste está sustentada por captura individual.'+
+    '</div>'+
+    '<div class="admin-tbl-wrap"><table><thead><tr>'+
+      '<th>Mes</th><th>Declarado</th><th>Estimado</th><th>Capturado</th><th>Brecha</th>'+
+      '<th>Respaldo</th><th>Prom. dec/cap</th>'+
+    '</tr></thead><tbody>'+filas+'</tbody></table></div>'+
+    (HIST.detalle.length
+      ? '<div class="avance-tit" style="margin-top:22px">Detalle por promotor &middot; '+esc(HIST.periodo_detalle)+'</div>'+
+        '<div class="admin-tbl-wrap"><table><thead><tr>'+
+        '<th style="min-width:130px">Promotor</th><th>Declarado</th><th>Capturado</th><th>Brecha</th>'+
+        '</tr></thead><tbody>'+HIST.detalle.map(function(d){
+          var br=(d.capturado===null?0:d.capturado)-(d.declarado===null?0:d.declarado);
+          return '<tr><td style="font-size:11px">'+esc(d.promotor_nombre)+'</td>'+
+            '<td>'+(d.declarado===null?'—':d.declarado)+'</td>'+
+            '<td>'+(d.capturado===null?'—':d.capturado)+'</td>'+
+            '<td style="font-weight:700;color:'+(br<0?'var(--ro)':'var(--ve)')+'">'+
+              (br>0?'+':'')+br+'</td></tr>';
+        }).join('')+'</tbody></table></div>'
+      : '');
+}
+
+
+function cargarAnalitica(){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  setSyncStatus('spin','Analizando…');
+  callBackend({action:'analitica',periodo:periodo,key:adminKey}).then(function(r){
+    setSyncStatus('ok','En línea');
+    if(!r||!r.ok){toast((r&&r.error)||'Error al calcular la analítica.',true);return;}
+    ANL=r;
+    METAS_LOCALES={};
+    if(r.promotores.length){
+      r.promotores[0].indicadores.forEach(function(i){METAS_LOCALES[i.id]=i.meta_local;});
+    }
+    renderAnalisis();
+    if(ADM)renderAdminDash(ADM);   // repinta Recepción ya con las metas locales
+    if(!el('tabCierre').classList.contains('oculto'))renderCierre();
+  }).catch(function(){setSyncStatus('err','Error');toast('Error de conexión.',true);});
+}
+
+
+function renderAnalisis(){
+  if(!ANL)return;
+  var c=ANL.cierre;
+  var nSenales=ANL.promotores.reduce(function(a,p){return a+p.senales.length;},0);
+
+  var html='<div class="admin-stats">'+
+    '<div class="admin-stat"><strong>'+c.campo.reportaron+'/'+c.campo.esperados+'</strong>Reportaron</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--o)"><strong>'+c.total.TVF+'</strong>TVF total</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--ve)"><strong>'+promedioCumplimiento()+'%</strong>Cumpl. local</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--ro)"><strong>'+nSenales+'</strong>Señales</div>'+
+    '</div>';
+
+  html+= ANL.promotores.length
+    ? ANL.promotores.map(filaAnalisis).join('')
+    : '<p class="anl-vacio">Sin promotores de campo activos en este período.</p>';
+
+  if(ANL.muertos.length){
+    html+='<div class="anl-muertos"><strong>Indicadores sin señal de vida</strong>'+
+      ANL.muertos.map(function(m){
+        return esc(m.id)+' &middot; '+m.pct_ceros+'% en cero ('+m.n+' registros)';
+      }).join(' &nbsp;|&nbsp; ')+
+      '<br>Revisar si es problema de captura o de operación.</div>';
+  }
+  el('tabAnalisis').innerHTML=html;
+}
+
+/** Promedio de pct_local sobre indicadores con meta local, entre quienes reportaron. */
+
+function promedioCumplimiento(){
+  var suma=0,n=0;
+  ANL.promotores.forEach(function(p){
+    if(p.sin_reporte)return;
+    p.indicadores.forEach(function(i){
+      if(i.meta_local>0&&!i.muerto&&i.pct_local!==null){suma+=i.pct_local;n++;}
+    });
+  });
+  return n?Math.round(suma/n):0;
+}
+
+
+function filaAnalisis(p){
+  var chips=p.sin_reporte
+    ? '<span class="anl-chip alta">sin reporte</span>'
+    : p.senales.map(function(s){
+        return '<span class="anl-chip '+esc(s.severidad)+'">'+esc(etiquetaSenal(s.regla))+'</span>';
+      }).join('');
+  if(!p.sin_reporte&&!p.senales.length&&p.cuartil_peor===1)
+    chips='<span class="anl-chip info">cuartil inferior</span>';
+
+  var delta=(p.delta_peor!==null&&p.delta_peor<0)
+    ? '<span class="anl-delta">&darr;'+Math.abs(Math.round(p.delta_peor*100))+'%</span>' : '';
+
+  var tvf=null;
+  p.indicadores.forEach(function(i){if(i.id==='TVF')tvf=i;});
+
+  return '<button type="button" class="anl-fila'+(p.semaforo==='rojo'?' critica':'')+'" '+
+    'onclick="abrirDetalleAnl(\''+esc(p.promotor_clave)+'\')">'+
+    '<div style="min-width:0">'+
+      '<div class="anl-nombre">'+esc(p.promotor_nombre)+'</div>'+
+      '<div class="anl-unidad">'+esc(p.unidad||'—')+'</div>'+
+      '<div class="anl-meta">'+sparkline(p.serie_tvf)+
+        '<span class="anl-unidad">TVF '+(tvf?tvf.valor:0)+'</span>'+delta+chips+'</div>'+
+    '</div>'+
+    dotSmf(p.semaforo)+
+  '</button>';
+}
+
+
+function etiquetaSenal(regla){
+  var m={clavado_en_meta:'clavado en meta',identico_mes_previo:'igual al mes previo',
+         salto_anomalo:'salto anómalo',cero_atipico:'cero atípico',filas_gemelas:'filas gemelas'};
+  return m[regla]||regla;
+}
+
+
+function sparkline(serie){
+  if(!serie||!serie.length)return '';
+  var max=Math.max.apply(null,serie.concat([1]));
+  return '<span class="anl-spark">'+serie.map(function(v,i){
+    return '<i class="'+(i===serie.length-1?'ult':'')+'" style="height:'+
+      Math.max(2,Math.round(v/max*22))+'px"></i>';
+  }).join('')+'</span>';
+}
+
+
+function abrirDetalleAnl(clave){
+  var p=null;
+  ANL.promotores.forEach(function(x){if(x.promotor_clave===clave)p=x;});
+  if(!p)return;
+  cerrarDetalleAnl();
+
+  var filas=p.indicadores.map(function(i){
+    return '<tr><td style="font-size:11px">'+esc(i.id)+(i.muerto?' &#9888;':'')+'</td>'+
+      '<td><strong>'+i.valor+'</strong></td>'+
+      '<td>'+(i.propio===null?'sin base':i.propio)+'</td>'+
+      '<td>'+(i.grupo===null?'—':i.grupo)+'</td>'+
+      '<td>'+(i.meta_local||'—')+'</td>'+
+      '<td>'+(i.semaforo==='sin_meta'?'—':dotSmf(i.semaforo))+'</td></tr>';
+  }).join('');
+
+  var senales=p.senales.length
+    ? '<ul style="margin:8px 0;padding-left:18px;font-size:11px;line-height:1.6">'+
+      p.senales.map(function(s){
+        return '<li><strong>'+esc(etiquetaSenal(s.regla))+':</strong> '+esc(s.detalle)+'</li>';
+      }).join('')+'</ul>'
+    : '<p style="font-size:11px;color:var(--mu);margin:8px 0">Sin señales de dato no creíble.</p>';
+
+  el('tabAnalisis').insertAdjacentHTML('afterbegin',
+    '<div id="anlDetalle" class="anl-det">'+
+      '<h3>'+esc(p.promotor_nombre)+'</h3>'+
+      '<p style="font-size:11px;color:var(--mu);margin:0 0 6px">'+esc(p.unidad||'—')+
+        ' &middot; '+esc(p.puesto)+(p.folio?' &middot; '+esc(p.folio):'')+'</p>'+
+      (p.sin_reporte?'<p class="anl-chip alta" style="display:inline-block">No entregó reporte este período</p>':'')+
+      senales+
+      '<div class="admin-tbl-wrap"><table><thead><tr>'+
+        '<th>Indicador</th><th>Mes</th><th>Su mediana</th><th>Grupo</th><th>Meta local</th><th></th>'+
+      '</tr></thead><tbody>'+filas+'</tbody></table></div>'+
+      '<div class="admin-ctl" style="margin-top:12px">'+
+        (p.sin_reporte?'':'<button type="button" class="btn-ctl accion" onclick="reabrirReporteAdmin(\''+esc(p.promotor_clave)+'\')">Reabrir para corrección</button>')+
+        '<button type="button" class="btn-ctl reload" onclick="cerrarDetalleAnl()">Cerrar</button>'+
+      '</div>'+
+    '</div>');
+  el('anlDetalle').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+
+function cerrarDetalleAnl(){
+  var d=el('anlDetalle');
+  if(d)d.parentNode.removeChild(d);
+}
+
+
+function reabrirReporteAdmin(clave){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  // Antes usaba prompt(): sin estilo, sin foco gestionado y bloqueado en
+  // algunos contextos embebidos. Además aceptaba motivo vacío.
+  confirmar({
+    titulo:'Reabrir el reporte',
+    cuerpo:'<p>Se reabrirá <b>'+esc(periodoLabel(periodo))+'</b> para este promotor, '+
+           'que podrá corregir y reenviar sus cifras.</p>',
+    pedirMotivo:'Motivo de la reapertura (queda registrado en el reporte)',
+    ok:'Reabrir'
+  }).then(function(motivo){
+    if(!motivo)return;
+    setSyncStatus('spin','Reabriendo…');
+    callBackend({action:'reabrir_reporte',promotor_clave:clave,periodo:periodo,
+                 motivo:motivo,key:adminKey}).then(function(r){
+      setSyncStatus('ok','En línea');
+      if(r&&r.ok){
+        toast('Reabierto. El promotor ya puede corregir '+periodoLabel(periodo)+'.');
+        cerrarDetalleAnl();cargarAnalitica();
+      } else toast((r&&r.error)||'No se pudo reabrir.',true);
+    }).catch(function(){setSyncStatus('err','Error');toast('Error de conexión.',true);});
+  });
+}
+
+// ---- Pestaña Cierre y envío ----
+var CAMPOS_OFICINA=['tvf','entornos_laborales','talleres_ps','alianzas','cartilla',
+  'cert_escuelas','talleres_adicciones','ref_total','cert_comunidades_n','periodicos_murales'];
+
+
+function campoAInd(campo){
+  var m={tvf:'TVF',entornos_laborales:'ENTORNOS',talleres_ps:'TALLER_PS',
+         alianzas:'ALIANZAS',cartilla:'CARTILLA',cert_escuelas:'ESCUELAS',
+         talleres_adicciones:'ADICCIONES',ref_total:'REFERIDOS',
+         cert_comunidades_n:'COMUNIDADES',periodicos_murales:'MURAL'};
+  return m[campo];
+}
+
+
+function renderCierre(){
+  if(!ANL)return;
+  var oficina=ANL.oficina.map(function(o){
+    var inputs=CAMPOS_OFICINA.map(function(c){
+      var val=o.indicadores[campoAInd(c)]||0;
+      return '<label>'+esc(c)+
+        '<input type="number" inputmode="numeric" min="0" id="ofi_'+esc(o.promotor_clave)+'_'+c+'" value="'+val+'"></label>';
+    }).join('');
+    return '<div class="anl-det" style="box-shadow:var(--s0);border-color:var(--bd)">'+
+      '<h3 style="font-size:13px">'+esc(o.promotor_nombre)+
+        (o.capturado?'':' <span class="anl-chip baja">sin capturar</span>')+'</h3>'+
+      '<div class="ofi-grid">'+inputs+'</div>'+
+      '<button type="button" class="btn-ctl accion" style="margin-top:10px" '+
+        'onclick="guardarOficina(\''+esc(o.promotor_clave)+'\')">Guardar cifras</button>'+
+    '</div>';
+  }).join('');
+
+  var per=el('adminPeriodo').value||PERIODO;
+  el('tabCierre').innerHTML=
+    '<div class="anl-muertos" style="border-left-color:var(--g);margin-top:0">'+
+      '<strong>Cierre del mes &middot; '+esc(periodoLabel(per))+'</strong>'+
+      'Sigue los pasos en orden. Todo se hace desde aqu&iacute;: no hace falta entrar a Apps Script.'+
+    '</div>'+
+
+    '<div class="avance-tit">1 &middot; Personal de oficina</div>'+
+    (oficina||'<p class="anl-vacio">Nadie marcado como <code>adscripcion=oficina</code> en CAT_PROMOTORES.</p>')+
+
+    '<div class="avance-tit" style="margin-top:26px">2 &middot; Plazas inactivas y oficina</div>'+
+    '<p style="font-size:11px;color:var(--mu);margin:0 0 8px">'+
+      'Se estima con la mediana de los meses que esa persona s&iacute; report&oacute; (m&iacute;nimo 3), '+
+      'tanto para plazas inactivas como para el personal de oficina. '+
+      'Lo que hayas capturado arriba manda: a esa persona no se le estima encima. '+
+      'Qui&eacute;n lleve m&aacute;s de 3 meses sin reportar se considera baja y queda fuera.</p>'+
+    '<div class="admin-ctl">'+
+      '<button type="button" class="btn-ctl reload" onclick="estimar(false)">Revisar estimaci&oacute;n</button>'+
+      '<button type="button" class="btn-ctl accion" onclick="estimar(true)">Aplicar estimaci&oacute;n</button>'+
+    '</div>'+
+    '<div id="estimResultado" style="margin-top:10px;font-size:12px"></div>'+
+
+    '<div class="avance-tit" style="margin-top:26px">3 &middot; Libro institucional</div>'+
+    '<div class="admin-ctl">'+
+      '<button type="button" class="btn-ctl accion" onclick="generarMes()">Generar '+esc(periodoLabel(per))+'</button>'+
+      '<button type="button" class="btn-ctl accion" onclick="reconstruirLibro()">Reconstruir el a&ntilde;o completo</button>'+
+    '</div>'+
+    '<p style="font-size:11px;color:var(--mu);margin:8px 0 0">'+
+      '<strong>Generar</strong> escribe la pesta&ntilde;a de este mes y congela lo declarado. '+
+      '<strong>Reconstruir</strong> rearma todas las pesta&ntilde;as del a&ntilde;o desde lo declarado, '+
+      'para que el archivo salga completo.</p>'+
+    '<div id="cierreResultado" style="margin-top:12px;font-size:12px"></div>';
+}
+
+
+function estimar(aplicar){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  setSyncStatus('spin',aplicar?'Estimando…':'Revisando…');
+  el('estimResultado').innerHTML='Calculando…';
+  callBackend({action:'estimacion',periodo:periodo,aplicar:aplicar,key:adminKey}).then(function(r){
+    setSyncStatus('ok','En línea');
+    if(!r||!r.ok){
+      el('estimResultado').innerHTML='<span style="color:var(--ro)">'+esc((r&&r.error)||'Error.')+'</span>';
+      return;
+    }
+    var h='<p><strong>'+(aplicar?'Aplicado':'Simulacro')+'</strong> &middot; '+
+      r.candidatos+' candidatas ('+r.inactivos+' inactivas, '+r.oficina+' de oficina) &middot; '+
+      r.estimadas+' estimadas.</p>';
+    if(r.detalle.length){
+      h+='<div class="admin-tbl-wrap"><table><thead><tr>'+
+        '<th style="min-width:130px">Plaza</th><th>Tipo</th><th>Base</th><th>Estimado</th></tr></thead><tbody>'+
+        r.detalle.map(function(d){
+          return '<tr><td style="font-size:11px">'+esc(d.nombre)+'</td>'+
+            '<td style="font-size:12px">'+esc(d.tipo)+'</td>'+
+            '<td style="font-size:12px">'+d.meses+' meses</td>'+
+            '<td style="font-size:12px">'+esc(d.valores||'todo en cero')+'</td></tr>';
+        }).join('')+'</tbody></table></div>';
+    }
+    if(r.ya_capturados&&r.ya_capturados.length){
+      h+='<div class="anl-muertos"><strong>No se estimaron porque ya tienen captura</strong>'+
+        r.ya_capturados.map(function(y){return esc(y.nombre)+' ('+esc(y.tipo)+')';}).join(' · ')+
+        '<br>Lo que capturaste a mano manda sobre la estimación.</div>';
+    }
+    if(r.bajas&&r.bajas.length){
+      h+='<div class="anl-muertos" style="border-left-color:var(--ro)"><strong>No se estimaron por baja</strong>'+
+        r.bajas.map(function(b){
+          return esc(b.nombre)+' — '+esc(b.motivo)+(b.ultimo?' (último: '+esc(b.ultimo)+')':'');
+        }).join('<br>')+'</div>';
+    }
+    if(r.sin_base&&r.sin_base.length){
+      h+='<div class="anl-muertos"><strong>Sin base suficiente</strong>'+
+        r.sin_base.map(function(s){return esc(s.nombre)+' — solo '+s.meses+' meses reales';}).join('<br>')+
+        '<br>Decide a mano si se reportan en cero.</div>';
+    }
+    if(!aplicar&&r.estimadas) h+='<p style="color:var(--mu)">Si te cuadra, pulsa <strong>Aplicar estimación</strong>.</p>';
+    el('estimResultado').innerHTML=h;
+    if(aplicar){toast('Estimación aplicada.');ANL=null;HIST=null;}
+  }).catch(function(err){
+    // Muestra la causa real: un "Error de conexión" genérico no dice si fue la
+    // red, una excepción del servidor o que la operación tardó demasiado.
+    setSyncStatus('err','Error');
+    var msg=err&&(err.message||err.toString&&err.toString())||'sin detalle';
+    el('estimResultado').innerHTML='<span style="color:var(--ro)">No se pudo completar: '+esc(msg)+'</span>';
+    toast('Falló la estimación.',true);
+  });
+}
+
+
+function generarMes(){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  setSyncStatus('spin','Generando…');
+  el('cierreResultado').innerHTML='Generando '+esc(periodoLabel(periodo))+'…';
+  callBackend({action:'exportar_mes',periodo:periodo,key:adminKey})
+    .then(pintarResultadoLibro).catch(errLibro);
+}
+
+
+function reconstruirLibro(){
+  var anio=(el('adminPeriodo').value||PERIODO).substring(0,4);
+  setSyncStatus('spin','Reconstruyendo…');
+  el('cierreResultado').innerHTML='Rearmando el año '+esc(anio)+'…';
+  callBackend({action:'reconstruir_libro',anio:anio,key:adminKey})
+    .then(pintarResultadoLibro).catch(errLibro);
+}
+
+
+function pintarResultadoLibro(r){
+  setSyncStatus('ok','En línea');
+  if(!r||!r.ok){
+    el('cierreResultado').innerHTML='<span style="color:var(--ro)">'+esc((r&&r.error)||'Error al generar.')+'</span>';
+    return;
+  }
+  var filas=(r.resumen||[]).map(function(m){
+    return '<tr><td>'+esc(nombreMesCliente(m.periodo))+'</td><td>'+m.filas+'</td>'+
+      '<td><strong>'+m.totales[0]+'</strong></td></tr>';
+  }).join('');
+  el('cierreResultado').innerHTML=
+    '<p><a href="'+esc(r.url)+'" target="_blank">Abrir en Google Sheets</a> &nbsp;&middot;&nbsp; '+
+    '<a href="'+esc(r.xlsx)+'" target="_blank"><strong>Descargar .xlsx</strong></a></p>'+
+    '<div class="admin-tbl-wrap"><table><thead><tr><th>Mes</th><th>Filas</th><th>TVF</th></tr></thead>'+
+    '<tbody>'+filas+'</tbody></table></div>';
+  HIST=null;
+}
+
+
+function errLibro(){setSyncStatus('err','Error');toast('Error de conexión.',true);}
+
+var MESES_CLIENTE=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO',
+                   'JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+function nombreMesCliente(p){
+  var m=parseInt(String(p).split('-')[1],10);
+  return MESES_CLIENTE[m-1]||p;
+}
+
+
+function guardarOficina(clave){
+  var cifras={};
+  CAMPOS_OFICINA.forEach(function(c){
+    cifras[c]=parseInt(el('ofi_'+clave+'_'+c).value,10)||0;
+  });
+  var periodo=el('adminPeriodo').value||PERIODO;
+  setSyncStatus('spin','Guardando…');
+  callBackend({action:'oficina_capturar',promotor_clave:clave,periodo:periodo,
+               cifras:cifras,key:adminKey}).then(function(r){
+    setSyncStatus('ok','En línea');
+    if(r&&r.ok){toast('Cifras guardadas.');cargarAnalitica();}
+    else toast((r&&r.error)||'No se pudo guardar.',true);
+  }).catch(function(){setSyncStatus('err','Error');toast('Error de conexión.',true);});
+}
+
+// generarLibro() se eliminó: llamaba a exportar_libro sin acotar periodos, lo
+// que regeneraba TODOS los meses desde REPORTE_MENSUAL y habría pisado
+// enero-junio con datos incompletos. Ahora hay dos botones explícitos:
+// generarMes() para el mes en curso y reconstruirLibro() para el año, este
+// último desde HISTORICO_ENVIADO, que es lo declarado.
+
+/**
+ * Celda con semáforo contra la meta LOCAL que vino del backend (CAT_METAS).
+ * El cliente ya no contiene ningún literal de meta: si la analítica todavía no
+ * cargó, o el indicador no tiene meta local, se pinta el número sin semáforo.
+ */
+
+function tdMeta(v,indId){
+  var n=parseInt(v,10)||0;
+  var meta=indId?METAS_LOCALES[indId]:0;
+  if(!meta) return '<td>'+n+'</td>';
+  var pct=Math.round(n/meta*100);
+  var col=n===0?'gris':pct>=95?'verde':pct>=80?'amarillo':'rojo';
+  return '<td>'+n+dotSmf(col)+'</td>';
+}
+
+/* Cerrar/abrir la recepción afecta a los 34 promotores a la vez y se
+   disparaba con un solo toque, sin confirmación. */
+
+function setPeriodo(estado){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  var cerrando=(estado==='cerrado');
+  confirmar({
+    titulo:cerrando?'Cerrar la recepción':'Reabrir la recepción',
+    cuerpo:'<p>Período <b>'+esc(periodoLabel(periodo))+'</b>.</p>'+
+      (cerrando
+        ? '<div class="cf-aviso">Ningún promotor podrá enviar ni corregir su reporte de este mes hasta que vuelvas a abrirlo.</div>'
+        : '<p>Los promotores que aún no han enviado podrán hacerlo.</p>'),
+    ok:cerrando?'Sí, cerrar':'Sí, abrir',
+    peligro:cerrando
+  }).then(function(ok){
+    if(!ok)return;
+    setSyncStatus('spin','Aplicando…');
+    callBackend({action:'set_periodo',periodo:periodo,estado:estado,key:adminKey}).then(function(r){
+      setSyncStatus('ok','En línea');
+      if(r&&r.ok){toast('Recepción de '+periodoLabel(periodo)+': '+estado+'.');cargarAdmin();}
+      else toast(r&&r.error||'Error',true);
+    }).catch(function(){setSyncStatus('err','Error');toast('Error de conexión.',true);});
+  });
+}
+
+// ===== FASE 2: COTEJO Y ALERTAS (admin) =====
+var ALERTAS=[];
+
+/* Deshabilita el botón mientras corre la petición. Sin esto, tocar dos veces
+   lanzaba dos cotejos concurrentes contra la misma hoja. */
+
+function ocupado(btn,txt){
+  if(!btn)return function(){};
+  var orig=btn.innerHTML;
+  btn.disabled=true;btn.setAttribute('aria-busy','true');
+  if(txt)btn.textContent=txt;
+  return function(){btn.disabled=false;btn.removeAttribute('aria-busy');btn.innerHTML=orig;};
+}
+
+
+function ejecutarCotejo(ev){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  var libera=ocupado(ev&&ev.currentTarget,'Cotejando…');
+  setSyncStatus('spin','Cotejando…');
+  callBackend({action:'cotejo_ejecutar',periodo:periodo,key:adminKey}).then(function(r){
+    libera();setSyncStatus('ok','En línea');
+    if(!r||!r.ok){toast((r&&r.error)||'Error al ejecutar el cotejo.',true);return;}
+    toast('Cotejo ejecutado: '+(r.nuevas||0)+' alertas nuevas.');
+    ALERTAS=r.alertas||[];
+    renderAlertas();
+  }).catch(function(){libera();setSyncStatus('err','Error');toast('Error de conexión.',true);});
+}
+
+
+function cargarAlertas(){
+  var periodo=el('adminPeriodo').value||PERIODO;
+  callBackend({action:'alertas',periodo:periodo,key:adminKey}).then(function(r){
+    if(r&&r.ok){ALERTAS=r.alertas||[];renderAlertas();}
+  }).catch(function(){});
+}
+
+
+function renderAlertas(){
+  var stats={alta:0,media:0,baja:0,informativa:0},abiertas=0;
+  ALERTAS.forEach(function(a){
+    if(stats[a.severidad]!==undefined)stats[a.severidad]++;
+    if(a.estatus!=='atendida')abiertas++;
+  });
+  el('alertaStats').innerHTML=
+    '<div class="admin-stat" style="border-left:3px solid var(--ro)"><strong>'+stats.alta+'</strong>Altas</div>'+
+    '<div class="admin-stat" style="border-left:3px solid #D97706"><strong>'+stats.media+'</strong>Medias</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--mu2)"><strong>'+(stats.baja+stats.informativa)+'</strong>Baja/Info</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--g)"><strong>'+abiertas+'</strong>Abiertas</div>';
+
+  if(!ALERTAS.length){
+    el('alertaTbody').innerHTML='<tr><td colspan="4" style="color:var(--mu);font-size:12px">Sin alertas para este período. Ejecuta el cotejo para generarlas.</td></tr>';
+    return;
+  }
+  el('alertaTbody').innerHTML=ALERTAS.map(function(a){
+    var atendida=a.estatus==='atendida';
+    var accion=atendida
+      ?'<button type="button" class="btn-ctl accion btn-mini" onclick="marcarAlerta(\''+esc(a.folio_alerta)+'\',\'abierta\')">Reabrir</button>'
+      :'<button type="button" class="btn-ctl accion btn-mini" onclick="marcarAlerta(\''+esc(a.folio_alerta)+'\',\'atendida\')">Atender</button>';
+    return '<tr'+(atendida?' style="opacity:.5"':'')+'>'+
+      '<td>'+esc(a.promotor_nombre||a.promotor_clave)+'</td>'+
+      '<td style="text-align:left;font-size:11px">'+esc(a.detalle)+'</td>'+
+      '<td><span class="sev sev-'+esc(a.severidad)+'">'+esc(a.severidad)+'</span></td>'+
+      '<td>'+accion+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+
+function marcarAlerta(folio,estatus){
+  callBackend({action:'alerta_estatus',folio_alerta:folio,estatus:estatus,key:adminKey}).then(function(r){
+    if(r&&r.ok)cargarAlertas();
+    else toast((r&&r.error)||'Error al actualizar la alerta.',true);
+  }).catch(function(){toast('Error de conexión.',true);});
+}
+
+// ===== EDITAR PROMOTOR =====
+var _editClave='';
+var _editActivo='1';
+
+
+function abrirEditFromRow(tdEl){
+  var clave=tdEl.getAttribute('data-clave');
+  var p=(window._promMap||{})[clave]||{};
+  abrirEditPromotor(clave,p);
+}
+
+
+function abrirEditPromotor(clave,p){
+  p=p||{};
+  _editClave=clave; _editActivo=p.activo!=='0'?'1':'0';
+  el('editNombre').textContent=(p.nombre||'')+' ('+clave+')';
+
+  // La base es lo que se rinde. Se muestra solo como referencia: cambiarla es un
+  // movimiento administrativo distinto y no se hace desde aquí.
+  el('editBase').innerHTML=
+    '<strong style="color:var(--ink2)">Adscripción base — es la que se reporta</strong><br>'+
+    esc(p.unidad_base||'sin unidad base')+
+    (p.clues_base?' &middot; '+esc(p.clues_base):' &middot; <em>sin CLUES base</em>');
+
+  el('editUnidad').value=p.unidad||'';
+  el('editClues').value=p.clues||'';
+  el('editVigente').value=el('adminPeriodo').value||PERIODO;
+  el('editRotaciones').innerHTML='';
+  actualizarBtnActivo();
+  abrirModal('modalEdit','#editUnidad');
+  cargarRotaciones(clave);
+}
+
+
+function cargarRotaciones(clave){
+  callBackend({action:'rotaciones',clave:clave,key:adminKey}).then(function(r){
+    if(!r||!r.ok||!r.rotaciones.length)return;
+    el('editRotaciones').innerHTML='<strong>Rotaciones anteriores</strong><br>'+
+      r.rotaciones.slice(0,5).map(function(x){
+        return esc(x.vigente_desde)+': '+esc(x.unidad_anterior||'—')+' &rarr; '+esc(x.unidad_nueva||'—');
+      }).join('<br>');
+  }).catch(function(){});
+}
+
+
+function actualizarBtnActivo(){
+  var btn=el('editActivoBtn');
+  if(_editActivo==='1'){
+    btn.textContent='Activo';
+    btn.style.background='#DCFCE7';btn.style.color='#166534';
+  } else {
+    btn.textContent='Inactivo';
+    btn.style.background='#FFE4E6';btn.style.color='#9B1C2E';
+  }
+}
+
+
+function toggleEditActivo(){
+  _editActivo=_editActivo==='1'?'0':'1';
+  actualizarBtnActivo();
+}
+
+
+function cerrarEdit(){cerrarModal('modalEdit');}
+
+
+function guardarEditPromotor(){
+  var unidad=el('editUnidad').value.trim();
+  if(!unidad){toast('Escribe la unidad operativa.',true);return;}
+  var campos={
+    unidad:unidad,
+    clues:el('editClues').value.trim(),
+    activo:_editActivo,
+    vigente_desde:el('editVigente').value||''
+  };
+  // rotar_promotor escribe el catálogo y, si cambió la adscripción operativa,
+  // deja constancia en la bitácora ROTACIONES.
+  callBackend({action:'rotar_promotor',clave:_editClave,campos:campos,key:adminKey}).then(function(r){
+    if(r&&r.ok){
+      toast(r.roto?'Rotación registrada.':'Guardado correctamente.');
+      cerrarEdit();
+      ANL=null;
+      cargarAdmin();
+    } else {
+      toast(r&&r.error||'Error al guardar.',true);
+    }
+  }).catch(function(){toast('Error de conexión.',true);});
+}
+
+// ===== TRANSPORT =====
+// Timeout de seguridad: si google.script.run no responde (p.ej. falla la
+// serialización del retorno), la promesa nunca resolvería y la app quedaría
+// atascada en "Cargando…". El timeout la rechaza y deja continuar en offline.
+
+
+(function(){
+  var esAppsScript = (typeof google!=='undefined' && google.script);
+  if(esAppsScript){
+    var a=document.getElementById('lnkCapturador');
+    if(a)a.href='?';
+  }
+})();
+</script>
+</body>
+</html>
