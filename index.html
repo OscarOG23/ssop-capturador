@@ -767,7 +767,11 @@ tr:hover td{background:var(--gxl)}
 .acuse-toolbar{max-width:820px;margin:0 auto 10px;display:flex;gap:8px;justify-content:flex-end}
 .acuse-sheet{
   max-width:820px;margin:0 auto;background:#fff;color:#111;
-  padding:26px 30px;font-family:Calibri,'Segoe UI',Arial,sans-serif;
+  padding:26px 30px;
+  /* Tipografía institucional: Montserrat, la misma de toda la interfaz.
+     Gotham es de licencia comercial y no se puede servir en web; Montserrat
+     es la geométrica libre equivalente y ya viene cargada. */
+  font-family:'Montserrat','Segoe UI',system-ui,Arial,sans-serif;
   font-size:12px;line-height:1.35;box-shadow:var(--s4);border-radius:4px;
 }
 /* Franja de logos oficiales. Alturas distintas a propósito: cada marca tiene
@@ -785,14 +789,15 @@ tr:hover td{background:var(--gxl)}
 .ac-logo-anexo{height:34px;margin-bottom:5px}
 .ac-head{display:flex;justify-content:space-between;gap:16px;border-bottom:2.5px solid #8A1E32;padding-bottom:10px}
 .ac-inst div{font-size:9.5px;font-weight:600;color:#333;line-height:1.45}
-.ac-inst .ac-tit{font-family:Cambria,Georgia,serif;font-size:13.5px;font-weight:800;color:#8A1E32;margin-top:6px;line-height:1.25}
+.ac-inst .ac-tit{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;font-size:13.5px;font-weight:800;
+  color:#8A1E32;margin-top:6px;line-height:1.25;letter-spacing:-.2px}
 .ac-inst .ac-sub{font-size:8.5px;color:#6B7280;letter-spacing:.7px;text-transform:uppercase;margin-top:3px;font-weight:700}
 .ac-folio-box{
   border:1.5px solid #8A1E32;border-radius:5px;padding:8px 12px;
   text-align:center;align-self:flex-start;min-width:168px;flex-shrink:0;
 }
 .ac-fol-lbl{font-size:8.5px;font-weight:800;letter-spacing:1px;color:#8A1E32}
-.ac-fol-val{font-family:'Courier New',monospace;font-size:11.5px;font-weight:700;color:#111;margin:3px 0}
+.ac-fol-val{font-family:ui-monospace,Consolas,'Courier New',monospace;font-size:11.5px;font-weight:700;color:#111;margin:3px 0}
 .ac-fol-fecha{font-size:8.5px;color:#555}
 /* El acuse se imprime en papel blanco: NO debe heredar tokens de tema.
    .ac-ident td caía en la regla global `td{color:var(--ink2)}` y en modo oscuro
@@ -816,14 +821,14 @@ tr:hover td{background:var(--gxl)}
 /* Clave oficial del formato MI-01-02 (FUN11, ACV10…): monoespaciada y angosta
    para que el renglón se lea como el del formato impreso. */
 .ac-tbl td.ac-cve{
-  font-family:'Courier New',monospace;font-size:9px;font-weight:700;
+  font-family:ui-monospace,Consolas,'Courier New',monospace;font-size:9px;font-weight:700;
   text-align:center;width:44px;color:#5a4632;background:#FAF7F2;
 }
 .ac-tbl tr.ac-grp td{
   background:#EDE4D6;font-size:9px;font-weight:800;
   text-transform:uppercase;letter-spacing:.5px;color:#5a4632;padding:3px 8px;
 }
-.ac-tbl tr.ac-grp .ac-grp-cve{font-family:'Courier New',monospace;letter-spacing:0}
+.ac-tbl tr.ac-grp .ac-grp-cve{font-family:ui-monospace,Consolas,'Courier New',monospace;letter-spacing:0}
 .ac-txt{margin-top:12px;border:1px solid #999}
 .ac-txt .ac-txt-tit{background:#B78D55;color:#fff;padding:4px 8px;font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase}
 .ac-txt .ac-txt-body{padding:6px 8px;font-size:10.5px;min-height:26px;white-space:pre-wrap}
@@ -842,9 +847,10 @@ tr:hover td{background:var(--gxl)}
 /* ── ANEXO: concentrado anual (hoja 2) ── */
 .ac-anexo{margin-top:26px;border-top:3px double #8A1E32;padding-top:14px}
 .ac-anexo-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin-bottom:10px}
-.ac-anexo-tit{font-family:Cambria,Georgia,serif;font-size:13px;font-weight:800;color:#8A1E32}
+.ac-anexo-tit{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;font-size:13px;font-weight:800;
+  color:#8A1E32;letter-spacing:-.2px}
 .ac-anexo-sub{font-size:9.5px;color:#555;margin-top:2px}
-.ac-anexo-fol{font-family:'Courier New',monospace;font-size:9px;color:#555;white-space:nowrap}
+.ac-anexo-fol{font-family:ui-monospace,Consolas,'Courier New',monospace;font-size:9px;color:#555;white-space:nowrap}
 .ac-mx{table-layout:fixed}
 .ac-mx th,.ac-mx td{text-align:center;font-size:9px;padding:3px 2px}
 .ac-mx th.mx-mes,.ac-mx td.mx-mes{
