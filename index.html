@@ -781,8 +781,13 @@ tr:hover td{background:var(--gxl)}
 .ac-fol-lbl{font-size:8.5px;font-weight:800;letter-spacing:1px;color:#8A1E32}
 .ac-fol-val{font-family:'Courier New',monospace;font-size:11.5px;font-weight:700;color:#111;margin:3px 0}
 .ac-fol-fecha{font-size:8.5px;color:#555}
+/* El acuse se imprime en papel blanco: NO debe heredar tokens de tema.
+   .ac-ident td caía en la regla global `td{color:var(--ink2)}` y en modo oscuro
+   el nombre, la unidad y la CLUES salían casi invisibles. Las reglas más
+   específicas (.ac-m, .ac-cve) siguen ganando por especificidad. */
+.acuse-sheet td{color:#111}
 .ac-ident{width:100%;border-collapse:collapse;margin-top:10px}
-.ac-ident td{border:1px solid #999;padding:4px 8px;font-size:10.5px;position:static}
+.ac-ident td{border:1px solid #999;padding:4px 8px;font-size:10.5px;position:static;color:#111}
 .ac-ident .ac-k{background:#F3EDE4;font-weight:700;color:#5a4632;width:16%;text-transform:uppercase;font-size:8.5px;letter-spacing:.4px}
 .ac-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;align-items:start}
 .ac-tbl{width:100%;border-collapse:collapse}
@@ -795,6 +800,17 @@ tr:hover td{background:var(--gxl)}
 .ac-tbl td.ac-n{text-align:center;font-weight:700;width:52px}
 .ac-tbl td.ac-m{text-align:center;font-size:9px;color:#666;width:52px}
 .ac-tbl tr.ac-total td{background:#F3EDE4;font-weight:800}
+/* Clave oficial del formato MI-01-02 (FUN11, ACV10…): monoespaciada y angosta
+   para que el renglón se lea como el del formato impreso. */
+.ac-tbl td.ac-cve{
+  font-family:'Courier New',monospace;font-size:9px;font-weight:700;
+  text-align:center;width:44px;color:#5a4632;background:#FAF7F2;
+}
+.ac-tbl tr.ac-grp td{
+  background:#EDE4D6;font-size:9px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.5px;color:#5a4632;padding:3px 8px;
+}
+.ac-tbl tr.ac-grp .ac-grp-cve{font-family:'Courier New',monospace;letter-spacing:0}
 .ac-txt{margin-top:12px;border:1px solid #999}
 .ac-txt .ac-txt-tit{background:#B78D55;color:#fff;padding:4px 8px;font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase}
 .ac-txt .ac-txt-body{padding:6px 8px;font-size:10.5px;min-height:26px;white-space:pre-wrap}
@@ -809,6 +825,23 @@ tr:hover td{background:var(--gxl)}
   margin-top:16px;border-top:1px solid #ccc;padding-top:8px;
   font-size:8.5px;color:#555;line-height:1.55;
 }
+
+/* ── ANEXO: concentrado anual (hoja 2) ── */
+.ac-anexo{margin-top:26px;border-top:3px double #8A1E32;padding-top:14px}
+.ac-anexo-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin-bottom:10px}
+.ac-anexo-tit{font-family:Cambria,Georgia,serif;font-size:13px;font-weight:800;color:#8A1E32}
+.ac-anexo-sub{font-size:9.5px;color:#555;margin-top:2px}
+.ac-anexo-fol{font-family:'Courier New',monospace;font-size:9px;color:#555;white-space:nowrap}
+.ac-mx{table-layout:fixed}
+.ac-mx th,.ac-mx td{text-align:center;font-size:9px;padding:3px 2px}
+.ac-mx th.mx-mes,.ac-mx td.mx-mes{
+  text-align:left;width:88px;font-size:8.5px;font-weight:700;padding-left:6px;
+}
+.ac-mx tr.mx-act td{background:#F9ECF0;font-weight:800}
+.ac-mx tr.mx-vacio td{color:#9a9a9a}
+.ac-mx td.ac-sin{color:#b0b0b0}
+.ac-mx .mx-marca{color:#8A1E32}
+.ac-mx tr.ac-total td{background:#F3EDE4;font-weight:800}
 @media(max-width:640px){.ac-cols{grid-template-columns:1fr}.ac-firmas{grid-template-columns:1fr}}
 
 /* ── PRINT (solo el acuse) ──────────────────────────── */
@@ -827,6 +860,15 @@ tr:hover td{background:var(--gxl)}
   body.print-acuse .ac-cols{grid-template-columns:1fr 1fr}
   body.print-acuse .ac-firmas{grid-template-columns:1fr 1.2fr 1fr}
   body.print-acuse .ac-tbl th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* El concentrado anual va en hoja aparte: la que se firma no debe apretarse,
+     y el anexo debe poder archivarse por separado. */
+  body.print-acuse .ac-anexo{
+    page-break-before:always;break-before:page;
+    margin-top:0;border-top:none;padding-top:0;
+  }
+  body.print-acuse .ac-mx tr{page-break-inside:avoid;break-inside:avoid}
+  body.print-acuse .ac-mx tr.mx-act td,
+  body.print-acuse .ac-mx tr.ac-total td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   @page{size:letter;margin:13mm 12mm}
 }
 
@@ -1924,6 +1966,91 @@ function cerrarAcuse(){
 
 function nv(v){var n=parseInt(v,10);return isNaN(n)?0:n;}
 
+/* Columnas del anexo anual. Abreviadas a propósito: el formato oficial es
+   apaisado y aquí la hoja es vertical; la leyenda al pie las desarrolla. */
+var COLS_MX=[
+  ['TVF','tvf'],['Refs.','ref_total'],['Cartilla','cartilla'],
+  ['Tall. PS','talleres_ps'],['Adicc.','talleres_adicciones'],
+  ['Mural','periodicos_murales'],['Escuelas','cert_escuelas'],
+  ['Comun.','cert_comunidades_n'],['Entornos','entornos_laborales'],
+  ['Alianzas','alianzas'],['Cronog.','cronogramas']
+];
+var MESES_NOM=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO',
+               'JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+
+/**
+ * Anexo anual estilo MI-01-02: los doce meses del año del reporte, con lo
+ * acumulado. Le da al jefe el contexto del año al validar, que es como está
+ * pensado el formato oficial.
+ *
+ * Sale en hoja aparte para no apretar la que se firma. Si solo hay un mes
+ * capturado no aporta nada y se omite.
+ */
+function htmlMatrizAnual(r){
+  var anio=String(r.periodo||'').substring(0,4);
+  if(!anio)return '';
+
+  // El reporte que se está imprimiendo manda sobre la copia cacheada del
+  // historial, que puede venir desactualizada.
+  var porMes={};
+  (HIST||[]).forEach(function(x){
+    if(String(x.periodo||'').substring(0,4)===anio)porMes[x.periodo]=x;
+  });
+  porMes[r.periodo]=r;
+
+  var conDatos=Object.keys(porMes).length;
+  if(conDatos<2)return '';
+
+  var tot={};
+  var filas=MESES_NOM.map(function(nom,i){
+    var per=anio+'-'+pad2(i+1);
+    var reg=porMes[per];
+    var esActual=(per===r.periodo);
+    var celdas=COLS_MX.map(function(c){
+      if(!reg)return '<td class="ac-sin">—</td>';
+      var v=nv(reg[c[1]]);
+      tot[c[1]]=(tot[c[1]]||0)+v;
+      return '<td>'+v+'</td>';
+    }).join('');
+    return '<tr class="'+(esActual?'mx-act':(reg?'':'mx-vacio'))+'">'+
+           '<td class="mx-mes">'+nom+(esActual?' <span class="mx-marca">◀</span>':'')+'</td>'+
+           celdas+'</tr>';
+  }).join('');
+
+  var filaTot='<tr class="ac-total"><td class="mx-mes">ACUMULADO '+esc(anio)+'</td>'+
+    COLS_MX.map(function(c){return '<td>'+nv(tot[c[1]])+'</td>';}).join('')+'</tr>';
+
+  return ''+
+  '<div class="ac-anexo">'+
+    '<div class="ac-anexo-head">'+
+      '<div>'+
+        '<div class="ac-anexo-tit">Anexo &middot; Concentrado anual '+esc(anio)+'</div>'+
+        '<div class="ac-anexo-sub">'+esc(r.promotor_nombre||CFG.promotor_nombre||'—')+
+          ' &middot; '+esc(r.unidad||CFG.unidad||'—')+'</div>'+
+      '</div>'+
+      '<div class="ac-anexo-fol">Folio del mes: '+esc(r.folio||'—')+'</div>'+
+    '</div>'+
+    '<table class="ac-tbl ac-mx">'+
+      '<tr><th class="mx-mes">Mes</th>'+
+        COLS_MX.map(function(c){return '<th>'+esc(c[0])+'</th>';}).join('')+'</tr>'+
+      filas+filaTot+
+    '</table>'+
+    '<div class="ac-legend">'+
+      '<b>TVF</b> Tarjetas de Visita Familiar realizadas &middot; '+
+      '<b>Refs.</b> Pacientes referidos a la unidad detectados por TVF &middot; '+
+      '<b>Cartilla</b> Acciones en Cartilla Nacional de Salud &middot; '+
+      '<b>Tall. PS</b> Talleres de Promoci&oacute;n de la Salud &middot; '+
+      '<b>Adicc.</b> Sesiones y talleres de Prevenci&oacute;n de Adicciones &middot; '+
+      '<b>Mural</b> Materiales elaborados &middot; '+
+      '<b>Escuelas</b> / <b>Comun.</b> Acciones de certificaci&oacute;n &middot; '+
+      '<b>Entornos</b> Entornos Laborales Saludables &middot; '+
+      '<b>Cronog.</b> Cronogramas semanales entregados.<br>'+
+      'El renglón marcado con ◀ es el mes que ampara este documento. '+
+      'Los meses con “—” no tienen reporte enviado en el sistema.'+
+    '</div>'+
+  '</div>';
+}
+
 function htmlAcuse(r){
   var nombre=r.promotor_nombre||CFG.promotor_nombre||'—';
   var clave =r.promotor_clave ||CFG.promotor_clave ||'—';
@@ -1931,34 +2058,50 @@ function htmlAcuse(r){
   var clues =r.clues ||CFG.clues ||'—';
   var est=String(r.estatus||'capturado').toUpperCase();
 
-  var refs=[
-    ['Menores de 5 años con IRAS',r.ref_iras],
-    ['Menores de 5 años con EDAS',r.ref_edas],
-    ['EDI / ET / Crecimiento y Desarrollo',r.ref_edi],
-    ['Embarazadas o puérperas',r.ref_embarazadas],
-    ['Citología vaginal',r.ref_citologia],
-    ['Sospecha de diabetes',r.ref_diabetes],
-    ['Hipertensos',r.ref_hipertensos],
-    ['Tosedores crónicos',r.ref_tosedores],
-    ['Otros motivos (TVF)',r.ref_otros]
+  /* Claves y redacción tomadas del formato institucional MI-01-02
+     ("Productividad MENSUAL Promotores y Gestores Comunitarios"). Se conservan
+     textuales para que Promoción de la Salud y SIS reconozcan cada renglón sin
+     tener que traducir nombres. */
+  var refsMenor=[
+    ['FUN11','IRAS',r.ref_iras],
+    ['FUN12','EDAS',r.ref_edas],
+    ['FUN13','Otros (EDI, ET, Crecimiento y Desarrollo)',r.ref_edi]
+  ];
+  var refsUnidad=[
+    ['ACV10','Tosedores crónicos',r.ref_tosedores],
+    ['ACV11','Hipertensos',r.ref_hipertensos],
+    ['ACV12','Sospecha de diabetes',r.ref_diabetes],
+    ['ACV13','Para citología vaginal',r.ref_citologia],
+    ['ACV20','Personas embarazadas o puérperas, durante la búsqueda intencionada',r.ref_embarazadas],
+    ['ACV14','Otros motivos (actualizar esquema de vacunación)',r.ref_otros]
   ];
   var acts=[
-    ['Tarjetas de Visita Familiar realizadas',r.tvf,'70/mes'],
-    ['Acciones registradas en Cartilla Nacional de Salud',r.cartilla,''],
-    ['Talleres de Promoción de la Salud impartidos',r.talleres_ps,'18/mes'],
-    ['Sesiones educativas y Talleres de Prevención de Adicciones',r.talleres_adicciones,'2/mes'],
-    ['Periódicos murales elaborados',r.periodicos_murales,'1/mes'],
-    ['Acciones del Proceso de Certificación de Escuelas Saludables y Seguras',r.cert_escuelas,''],
-    ['Acciones en el proceso de Certificación de Comunidades Saludables',r.cert_comunidades_n,''],
-    ['Entornos Laborales Saludables intervenidos y/o certificados',r.entornos_laborales,'3/trim'],
-    ['Alianzas Estratégicas establecidas',r.alianzas,'1/trim'],
-    ['Cronogramas semanales de actividades entregados',r.cronogramas,'4/mes']
+    ['Cronograma semanal de actividades entregado',r.cronogramas,'4/mes'],
+    ['Número de Tarjetas de Visita Familiar realizadas',r.tvf,'70/mes'],
+    ['Número de Entornos Laborales Saludables intervenidos y/o certificados',r.entornos_laborales,'3/trim'],
+    ['No. de Talleres de Promoción de la Salud impartidos',r.talleres_ps,'18/mes'],
+    ['No. de Alianzas estratégicas',r.alianzas,'1/trim'],
+    ['Número de Acciones registradas en Cartilla Nacional de Salud',r.cartilla,''],
+    ['Número de Acciones del Proceso de Certificación de Escuelas Saludables y Seguras',r.cert_escuelas,''],
+    ['Sesiones educativas y Talleres de Prevención de Adicciones realizadas',r.talleres_adicciones,'2/mes'],
+    ['Acciones realizadas en el proceso de Certificación de Comunidades Saludables',r.cert_comunidades_n,''],
+    ['Número de Materiales elaborados (periódico mural, carteles y otros)',r.periodicos_murales,'1/mes']
   ];
 
-  var filasRefs=refs.map(function(x){
-    return '<tr><td>'+esc(x[0])+'</td><td class="ac-n">'+nv(x[1])+'</td></tr>';
-  }).join('')+
-  '<tr class="ac-total"><td>TOTAL DE PERSONAS REFERIDAS A UNIDAD MÉDICA</td><td class="ac-n">'+nv(r.ref_total)+'</td></tr>';
+  function filaRef(x){
+    return '<tr><td class="ac-cve">'+esc(x[0])+'</td><td>'+esc(x[1])+
+           '</td><td class="ac-n">'+nv(x[2])+'</td></tr>';
+  }
+  var filasRefs=
+    '<tr class="ac-grp"><td colspan="3">Menor de 5 años <span class="ac-grp-cve">(156)</span></td></tr>'+
+    refsMenor.map(filaRef).join('')+
+    '<tr class="ac-grp"><td colspan="3">Personas referidas a Unidad médica</td></tr>'+
+    refsUnidad.map(filaRef).join('')+
+    '<tr class="ac-grp"><td colspan="3">Búsqueda intencionada</td></tr>'+
+    filaRef(['ACV15','Visitas domiciliarias (Tarjetas de Visita Familiar)',r.tvf])+
+    '<tr class="ac-total"><td colspan="2">TOTAL DE PACIENTES REFERIDOS A LA UNIDAD DE SALUD, '+
+      'DETECTADOS A TRAVÉS DE LA TARJETA DE VISITA FAMILIAR</td>'+
+      '<td class="ac-n">'+nv(r.ref_total)+'</td></tr>';
 
   var filasActs=acts.map(function(x){
     return '<tr><td>'+esc(x[0])+'</td><td class="ac-n">'+nv(x[1])+'</td><td class="ac-m">'+esc(x[2]||'—')+'</td></tr>';
@@ -1977,8 +2120,8 @@ function htmlAcuse(r){
       '<div>Subdirecci&oacute;n de Prevenci&oacute;n y Control de Enfermedades</div>'+
       '<div>Departamento de Pol&iacute;ticas de Salud P&uacute;blica y Promoci&oacute;n de la Salud</div>'+
       '<div>Jurisdicci&oacute;n Sanitaria XIX Texcoco</div>'+
-      '<div class="ac-tit">Reporte Mensual de Productividad de Promotores y T&eacute;cnicos en Programa de Salud</div>'+
-      '<div class="ac-sub">Acuse de env&iacute;o &middot; Sistema de Seguimiento Operativo de Promotores (SSOP)</div>'+
+      '<div class="ac-tit">Productividad Mensual de Promotores y Gestores Comunitarios</div>'+
+      '<div class="ac-sub">Formato MI-01-02 &middot; Promoci&oacute;n de la Salud</div>'+
     '</div>'+
     '<div class="ac-folio-box">'+
       '<div class="ac-fol-lbl">FOLIO</div>'+
@@ -1996,7 +2139,7 @@ function htmlAcuse(r){
   '</table>'+
   '<div class="ac-cols">'+
     '<table class="ac-tbl">'+
-      '<tr><th>Referencias a unidad m&eacute;dica</th><th>Cant.</th></tr>'+filasRefs+
+      '<tr><th colspan="2">Referencias</th><th>Cant.</th></tr>'+filasRefs+
     '</table>'+
     '<table class="ac-tbl">'+
       '<tr><th>Actividades del mes</th><th>Cant.</th><th>Meta</th></tr>'+filasActs+
@@ -2024,18 +2167,21 @@ function htmlAcuse(r){
     '<div class="ac-firma">'+
       '<div class="ac-f-linea"></div>'+
       '<div class="ac-f-nom">Nombre, firma y cargo</div>'+
-      '<div class="ac-f-cargo">Coordinador(a) / Administrador(a) / Jefe(a) de Enfermer&iacute;a</div>'+
-      '<div class="ac-f-rol">VALID&Oacute;</div>'+
+      '<div class="ac-f-cargo">Jefe(a) inmediato(a) &middot; Coordinador(a), Administrador(a) '+
+        'o Jefe(a) de Enfermer&iacute;a</div>'+
+      '<div class="ac-f-rol">VALID&Oacute; / Vo.Bo.</div>'+
     '</div>'+
-    '<div class="ac-firma ac-sello">SELLO</div>'+
+    '<div class="ac-firma ac-sello">SELLO DE LA UNIDAD</div>'+
   '</div>'+
   '<div class="ac-legend">'+
-    'Acuse generado por el SSOP &middot; Jurisdicci&oacute;n Sanitaria XIX Texcoco, ISEM. Los datos corresponden '+
-    'a lo capturado por el(la) promotor(a) en el sistema; el folio permite verificar el registro original. '+
-    'Este documento debe presentarse <b>impreso, con nombre, firma, cargo y sello</b> de quien valida '+
-    '(coordinador(a), administrador(a) o jefe(a) de enfermer&iacute;a) para la validaci&oacute;n de productividad ante SIS. '+
-    '<b>No es v&aacute;lido sin firma y sello.</b>'+
-  '</div>';
+    'Documento generado por el SSOP &middot; Jurisdicci&oacute;n Sanitaria XIX Texcoco, ISEM. '+
+    'Las cifras corresponden a lo capturado por el(la) promotor(a) para el mes indicado; el folio permite '+
+    'verificar el registro original en el sistema. Las claves <b>FUN</b> y <b>ACV</b> corresponden al formato '+
+    'institucional <b>MI-01-02</b> de Productividad Mensual de Promotores y Gestores Comunitarios. '+
+    'Debe presentarse <b>impreso, con nombre, firma, cargo y sello</b> de quien valida, para el registro de '+
+    'productividad ante SIS. <b>No es v&aacute;lido sin firma y sello.</b>'+
+  '</div>'+
+  htmlMatrizAnual(r);
 }
 
 // ===== PLAN (CRONOGRAMA — el "planeado") =====
