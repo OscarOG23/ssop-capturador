@@ -2163,10 +2163,13 @@ function htmlAcuse(r){
 
   return ''+
   '<div class="ac-logos">'+
+    /* Orden pedido: escudo, Salud (Estado de México / Secretaría de Salud),
+       ISEM, y por último Promoción de la Salud -- ISEM queda justo antes
+       del logo de Promoción, no antes del bloque Salud. */
     '<div class="ac-logos-izq">'+
       '<img class="ac-logo ac-logo-escudo" src="'+LOGO_ESCUDO+'" alt="">'+
-      '<img class="ac-logo ac-logo-isem" src="'+LOGO_ISEM+'" alt="">'+
       '<img class="ac-logo ac-logo-salud" src="'+LOGO_SALUD+'" alt="">'+
+      '<img class="ac-logo ac-logo-isem" src="'+LOGO_ISEM+'" alt="">'+
     '</div>'+
     '<img class="ac-logo ac-logo-prom" src="'+LOGO_PROMOCION+'" alt="">'+
   '</div>'+
