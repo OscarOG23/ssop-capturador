@@ -822,6 +822,7 @@ input[type=file]:focus-visible + .upload-btn,
     <div>
       <div class="id-nombre" id="idNombre">—</div>
       <div class="id-info" id="idInfo"></div>
+      <div class="id-info oculto" id="idPortal">Entró desde el portal</div>
     </div>
     <button type="button" class="lnk" onclick="abrirSetup()">Cambiar<span class="sr-only"> de promotor</span></button>
   </div>
@@ -1194,8 +1195,44 @@ document.addEventListener('DOMContentLoaded',function(){
   PROM=leer(K.prom,[]);
   DRAFT=leer(K.draft,{});
   PERIODO=periodoActual();
-  cargarCatalogo();
+  var boleto=tomarBoletoDeUrl();
+  if(boleto)entrarConBoleto(boleto);
+  else cargarCatalogo();
 });
+
+/* ===== ENTRADA DESDE EL PORTAL =====
+   El portal de Promoción abre esta página con ?boleto=<boleto firmado>. El
+   boleto se quita de la barra de direcciones en cuanto se lee (que no quede
+   en el historial ni en un enlace compartido) y el servidor dice quién es.
+   Si falla, se avisa y se vuelve al selector de nombre de siempre. */
+var FORZAR_SETUP=false;
+
+function tomarBoletoDeUrl(){
+  try{
+    var u=new URL(location.href),b=u.searchParams.get('boleto');
+    if(!b)return '';
+    u.searchParams.delete('boleto');
+    if(history.replaceState)history.replaceState(null,'',u.pathname+u.search+u.hash);
+    return b;
+  }catch(e){return '';}
+}
+
+function entrarConBoleto(boleto){
+  setSyncStatus('spin','Entrando desde el portal…');
+  callBackend({action:'entrar_con_boleto',boleto:boleto}).then(function(r){
+    if(r&&r.ok&&r.promotor_clave){
+      fijarPromotor({clave:r.promotor_clave,nombre:r.promotor_nombre,unidad:r.unidad,
+                     unidad_base:r.unidad_base,clues:r.clues});
+      show('idPortal');
+    }else{
+      toast((r&&(r.msg||r.error))||'No se pudo entrar desde el portal. Elija su nombre.',true);
+      FORZAR_SETUP=true;
+    }
+  }).catch(function(){
+    toast('No se pudo entrar desde el portal (sin conexión). Elija su nombre.',true);
+    FORZAR_SETUP=true;
+  }).then(cargarCatalogo);
+}
 
 document.addEventListener('keydown',function(e){
   if(document.activeElement&&document.activeElement.classList&&
@@ -1448,12 +1485,12 @@ function cargarCatalogo(){
     if(r&&r.ok&&r.promotores){PROM=r.promotores;guardar(K.prom,PROM);}
     if(r&&r.ok&&r.catalogo){guardar(K.cat,r.catalogo);}
     actualizarUnidadActiva();
-    if(!CFG.promotor_clave){abrirSetup();}
+    if(!CFG.promotor_clave||FORZAR_SETUP){abrirSetup();}
     // Los periodos capturables los fija el servidor antes de pintar nada.
     else{cargarPeriodos().then(verificarEstado);}
   }).catch(function(){
     setSyncStatus('err','Sin conexión');
-    if(!CFG.promotor_clave){abrirSetup();}
+    if(!CFG.promotor_clave||FORZAR_SETUP){abrirSetup();}
     else{if(PROM.length)actualizarUnidadActiva();verificarEstado();}
   });
 }
@@ -2359,13 +2396,20 @@ function abrirSetup(){
 }
 
 
+/* Única forma de fijar el promotor del dispositivo: la usan el selector
+   (guardarCfg) y la entrada desde el portal (entrarConBoleto). */
+function fijarPromotor(p){
+  CFG={promotor_clave:p.clave,promotor_nombre:p.nombre||'',unidad:p.unidad||'',unidad_base:p.unidad_base||'',clues:p.clues||''};
+  guardar(K.cfg,CFG);
+}
+
 function guardarCfg(){
   var sel=el('cfgPromotor'),clave=sel.value;
   if(!clave){toast('Selecciona tu nombre.',true);return;}
   var lista=PROM.length?PROM:leer(K.prom,[]);
   var p=lista.find(function(x){return x.clave===clave;});
-  CFG={promotor_clave:clave,promotor_nombre:p?p.nombre:'',unidad:p?p.unidad:'',unidad_base:p?p.unidad_base:'',clues:p?p.clues:''};
-  guardar(K.cfg,CFG);
+  fijarPromotor(p||{clave:clave});
+  FORZAR_SETUP=false;ocul('idPortal');
   ocul('vSetup');show('vApp');
   // Primera entrada tras elegir promotor: también aquí manda el servidor.
   (PERIODOS_OK?Promise.resolve():cargarPeriodos()).then(verificarEstado);
