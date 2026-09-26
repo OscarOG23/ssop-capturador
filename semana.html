@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>SSOP · Cronogramas de la unidad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
+<!--
+  SSOP · Cronogramas de la unidad (página de jefaturas)
+  - Solo lectura: las jefaturas de cada unidad ven el cronograma semanal de
+    sus promotores (programado, realizado y cambios hechos después de enviar).
+  - Se entra con un enlace secreto: un token por unidad, que coordinación puede
+    regenerar desde el panel («Nuevo enlace»); el anterior deja de funcionar.
+  - NUNCA muestra fotos, coordenadas ni alertas: si el enlace se filtra, no
+    sirve para ubicar a una persona en campo.
+  - Se sirve desde GitHub Pages como documento único (como el capturador) y
+    lee los datos del Apps Script /exec.
+-->
+<style>
+:root{color-scheme:light dark;--g:#8A1E32;--o:#B78D55;--op:#F5EFE5;--o-tx:#7D6030;--ink:#1A1614;--ink2:#2D2926;--mu:#6B7280;--bd:#E8E3DD;--bd2:#F0ECE7;--pa:#FAF9F7;--wh:#FFFFFF;--ve:#166534;--ve-bg:#DCFCE7;--ro:#9B1C2E;--ro-bg:#FFE4E6;--am:#92400E;--am-bg:#FEF3C7}
+@media(prefers-color-scheme:dark){:root{--ink:#F3EFEA;--ink2:#E2DCD5;--mu:#A8A29E;--bd:#3A3431;--bd2:#2E2926;--pa:#1C1917;--wh:#24201D;--op:#2E2620;--o-tx:#D4B483;--ve-bg:#14311F;--ro-bg:#3B1219;--ro:#FDA4AF;--am-bg:#3A2A10;--am:#FCD34D}}
+*{box-sizing:border-box}body{margin:0;background:var(--pa);color:var(--ink);font-family:'Montserrat','Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.5}
+header{background:var(--g);color:#fff;padding:16px}header h1{margin:0;font-size:18px;font-weight:800}header p{margin:2px 0 0;font-size:13px;opacity:.9}
+main{max-width:860px;margin:0 auto;padding:16px}label{font-weight:700;font-size:14px;margin-right:6px}
+select{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--wh);color:var(--ink);min-height:44px;max-width:100%}
+.leyenda{font-size:12px;color:var(--mu);margin:10px 0}.card{background:var(--wh);border:1px solid var(--bd);border-radius:12px;padding:14px;margin:12px 0}
+.card h2{margin:0;font-size:16px}.estado{font-size:13px;font-weight:700;margin:4px 0 8px}.ok{color:var(--ve)}.mal{color:var(--ro)}.aviso{color:var(--am)}
+.ren{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--bd2)}.ren>div:first-child{min-width:0;flex:1;overflow-wrap:anywhere}
+.ren small{color:var(--mu);display:block;overflow-wrap:anywhere}.dias{display:flex;gap:3px;flex:0 0 171px;flex-wrap:wrap;justify-content:flex-end}
+.d{width:26px;height:26px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;background:var(--bd2);color:var(--mu)}
+.d.p{background:var(--op);color:var(--o-tx);border:1px solid var(--o)}.d.h{background:var(--ve);color:#fff}.d.n{background:var(--ro-bg);color:var(--ro);text-decoration:line-through}
+.cambio{font-size:12px;color:var(--am);margin-top:4px}.vacio{color:var(--mu);text-align:center;padding:24px 0}
+@media(max-width:420px){main{padding:12px}.card{padding:12px}.ren{gap:6px}.dias{flex-basis:165px;gap:2px}.d{width:25px;height:25px}}
+</style>
+</head>
+<body>
+<header><h1 id="titulo">Cronogramas semanales</h1><p id="sub">Solo lectura · para su conocimiento</p></header>
+<main>
+  <label for="selSemana">Semana:</label><select id="selSemana" onchange="cargar(this.value)"></select>
+  <div class="leyenda"><span class="d p">L</span> programado · <span class="d h">L</span> realizado · <span class="d n">L</span> no realizado. En realizados: 🟢 comprobado con foto y ubicación · 🟡 con foto · ⚪ declarado.</div>
+  <div id="cuerpo"><p class="vacio">Cargando…</p></div>
+</main>
+<script>
+var ENDPOINT_DEFAULT = 'https://script.google.com/macros/s/AKfycbygXHFeDDQ2MWTwYoxN2xDd-RitXKUk6--xm3oltO4ZU-MtUVTbnkeEc9qHYgN3Y_8/exec';
+var TOKEN='',DIAS=['L','M','X','J','V','S'];
+var NOMBRE_DIA={L:'Lunes',M:'Martes',X:'Miércoles',J:'Jueves',V:'Viernes',S:'Sábado'};
+var ICO={verde:'🟢',amarillo:'🟡',blanco:'⚪'};
+var MESES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function el(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fechaCorta(f){var p=String(f).split('-');return (+p[2])+' '+MESES[p[1]-1];}
+function callBackend(payload){return new Promise(function(resolve,reject){
+  var to=setTimeout(function(){reject(new Error('Tiempo de espera agotado'));},20000);
+  function ok(r){clearTimeout(to);resolve(r);}function fail(e){clearTimeout(to);reject(e);}
+  if(typeof google!=='undefined'&&google.script&&google.script.run){google.script.run.withSuccessHandler(ok).withFailureHandler(fail).apiCall(payload);return;}
+  if(!ENDPOINT_DEFAULT){fail(new Error('Sin endpoint'));return;}
+  fetch(ENDPOINT_DEFAULT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)})
+    .then(function(r){return r.json();}).then(ok).catch(fail);
+});}
+function cargar(sid){
+  el('cuerpo').innerHTML='<p class="vacio">Cargando…</p>';
+  callBackend({action:'crono_jefe',token:TOKEN,semana_id:sid||''}).then(function(r){
+    if(!r||!r.ok){el('cuerpo').innerHTML='<p class="vacio">'+esc((r&&r.error)||'No se pudo cargar.')+'</p>';return;}
+    el('titulo').textContent=r.unidad;el('sub').textContent=(r.jefe_nombre?r.jefe_nombre+' · ':'')+'Solo lectura · para su conocimiento';
+    el('selSemana').innerHTML=r.semanas.map(function(s){return '<option value="'+esc(s)+'"'+(s===r.semana_id?' selected':'')+'>Semana del '+fechaCorta(s)+'</option>';}).join('');
+    el('cuerpo').innerHTML=r.promotores.length?r.promotores.map(tarjeta).join(''):'<p class="vacio">No hay personal registrado en esta unidad.</p>';
+  }).catch(function(){el('cuerpo').innerHTML='<p class="vacio">Sin conexión. Intente de nuevo.</p>';});
+}
+function tarjeta(p){
+  var s=p.semana,c=s.cabecera,est;
+  if(!c)est='<div class="estado mal">Sin cronograma entregado</div>';
+  else if(c.estatus==='cerrada')est='<div class="estado ok">Semana cerrada · '+esc(c.pct_cumplimiento)+'% cumplido'+(c.tardio_cierre?' (cerró tarde)':'')+'</div>';
+  else est='<div class="estado '+(s.estado_tiempo==='abierta'?'':'aviso')+'">'+(s.estado_tiempo==='abierta'?'Programada':'Sin cerrar a tiempo')+' · entregada '+(c.tardio_programado?'tarde':'a tiempo')+'</div>';
+  var rs=(s.renglones||[]).map(function(r){
+    var dias=DIAS.map(function(l){
+      if(r.dias_prog.indexOf(l)===-1)return '<span class="d" aria-hidden="true">'+l+'</span>';
+      var hecho=(r.dias_real||[]).indexOf(l)!==-1,no=r.dias_no&&r.dias_no[l],n=s.niveles[r.renglon_id+'|'+s.fechas[l]];
+      var txt=NOMBRE_DIA[l]+': '+(hecho?'realizado'+(n?' '+(ICO[n.nivel]||''):''):(no?'no realizado':'programado'));
+      return '<span class="d '+(hecho?'h':(no?'n':'p'))+'" title="'+esc(txt)+'" aria-label="'+esc(txt)+'">'+(hecho&&n?(ICO[n.nivel]||l):l)+'</span>';
+    }).join('');
+    return '<div class="ren"><div><b>'+esc(r.actividad_nombre)+(r.detalle?' · '+esc(r.detalle):'')+'</b><small>'+esc([r.lugar_general,r.lugar_especifico].filter(Boolean).join(' — '))+' · '+esc(r.hora_ini)+'–'+esc(r.hora_fin)+'</small>'+
+      (r.editado_post_envio?'<div class="cambio">Modificado después de enviar'+(r.ultimo_cambio_ts?' ('+esc(r.ultimo_cambio_ts)+')':'')+'</div>':'')+'</div><div class="dias">'+dias+'</div></div>';
+  }).join('');
+  return '<div class="card"><h2>'+esc(p.nombre)+'</h2>'+est+(rs||'')+'</div>';
+}
+function arrancar(){if(!TOKEN){el('cuerpo').innerHTML='<p class="vacio">Enlace incompleto. Pida el enlace a coordinación.</p>';return;}cargar('');}
+if(typeof google!=='undefined'&&google.script&&google.script.url){google.script.url.getLocation(function(loc){TOKEN=(loc.parameter&&loc.parameter.j)||'';arrancar();});}
+else{var m=location.search.match(/[?&]j=([A-Za-z0-9]+)/);TOKEN=m?m[1]:'';arrancar();}
+</script>
+</body>
+</html>

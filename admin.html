@@ -463,6 +463,7 @@ tr:hover td{background:var(--gxl)}
       <button type="button" class="admin-tab" role="tab" data-tab="analisis" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('analisis')">An&aacute;lisis</button>
       <button type="button" class="admin-tab" role="tab" data-tab="cierre" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('cierre')">Cierre y env&iacute;o</button>
       <button type="button" class="admin-tab" role="tab" data-tab="historico" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('historico')">Hist&oacute;rico</button>
+      <button type="button" class="admin-tab" role="tab" data-tab="cronogramas" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('cronogramas')">Cronogramas</button>
     </div>
 
     <div id="tabRecepcion" class="admin-tab-panel">
@@ -521,6 +522,7 @@ tr:hover td{background:var(--gxl)}
     <div id="tabAnalisis" class="admin-tab-panel oculto"></div>
     <div id="tabCierre" class="admin-tab-panel oculto"></div>
     <div id="tabHistorico" class="admin-tab-panel oculto"></div>
+    <div id="tabCronogramas" class="admin-tab-panel oculto"></div>
   </div>
 </div>
 
@@ -554,6 +556,18 @@ tr:hover td{background:var(--gxl)}
   </div>
 </div>
 
+
+<div id="modalCrono" class="admin-overlay oculto" role="dialog" aria-modal="true" aria-labelledby="crTitulo" onclick="if(event.target===this)cerrarModal('modalCrono')">
+  <div class="modal-sheet">
+    <div class="modal-hdr">
+      <h3 id="crTitulo">Cronograma</h3>
+      <button type="button" class="icon-btn" onclick="cerrarModal('modalCrono')" aria-label="Cerrar">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="crCuerpo"></div>
+  </div>
+</div>
 
 <!-- CONFIRMACIÓN (sustituye a confirm()/prompt() del navegador) -->
 <div id="modalConfirm" class="admin-overlay oculto" role="dialog" aria-modal="true" aria-labelledby="cfTitulo">
@@ -941,7 +955,7 @@ var METAS_LOCALES={};         // {IND: meta_local} — única fuente de metas en
 
 
 function cambiarTabAdmin(tab){
-  ['recepcion','analisis','cierre','historico'].forEach(function(t){
+  ['recepcion','analisis','cierre','historico','cronogramas'].forEach(function(t){
     var btn=document.querySelector('.admin-tab[data-tab="'+t+'"]');
     if(btn){
       var act=(t===tab);
@@ -955,7 +969,122 @@ function cambiarTabAdmin(tab){
   if(tab==='analisis'){ANL?renderAnalisis():cargarAnalitica();}
   if(tab==='cierre'){ANL?renderCierre():cargarAnalitica();}
   if(tab==='historico'){HIST?renderHistorico():cargarHistorico();}
+  if(tab==='cronogramas'){CR_TAB?renderCronogramas():cargarCronogramas();}
 }
+
+// ===== Pestaña Cronogramas (supervisión semanal) =====
+var CR_SEM='',CR_TAB=null;
+var ETQ_PROG={a_tiempo:'A tiempo',tardio:'Tardío',sin_entregar:'Sin entregar'};
+var ETQ_CIERRE={cerrada:'Cerrada',abierta:'Abierta',vencida:'Vencida'};
+var ICO_NIVEL={verde:'🟢',amarillo:'🟡',blanco:'⚪'};
+var DIAS_A=['L','M','X','J','V','S'];
+
+function escA(s){return esc(s==null?'':s).replace(/"/g,'&quot;');}
+function lunesDe(d){var x=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())),w=x.getUTCDay();x.setUTCDate(x.getUTCDate()+(w===0?-6:1-w));return x.toISOString().substring(0,10);}
+function sumarDiasA(f,n){var p=f.split('-');return new Date(Date.UTC(+p[0],p[1]-1,+p[2])+n*86400000).toISOString().substring(0,10);}
+function opcionesSemanasCr(){var s=lunesDe(new Date()),o=[];for(var k=-1;k<=8;k++)o.push(sumarDiasA(s,-7*k));return o;}
+
+function cargarCronogramas(){
+  if(!CR_SEM)CR_SEM=lunesDe(new Date());
+  el('tabCronogramas').innerHTML='<p class="anl-vacio">Cargando…</p>';
+  callBackend({action:'crono_tablero',semana_id:CR_SEM,key:adminKey}).then(function(r){
+    if(!r||!r.ok){el('tabCronogramas').innerHTML='<p class="anl-vacio">'+esc((r&&r.error)||'Error.')+'</p>';return;}
+    CR_TAB=r;renderCronogramas();
+  }).catch(function(){el('tabCronogramas').innerHTML='<p class="anl-vacio">Error de conexión.</p>';});
+}
+
+function renderCronogramas(){
+  var r=CR_TAB,ent=r.filas.filter(function(f){return f.programado!=='sin_entregar';}).length;
+  var sel='<div class="periodo-sel-wrap"><label for="crSemana">Semana del lunes:</label><select id="crSemana" onchange="CR_SEM=this.value;cargarCronogramas()">'+
+    opcionesSemanasCr().map(function(s){return '<option value="'+s+'"'+(s===CR_SEM?' selected':'')+'>'+s+'</option>';}).join('')+'</select></div>';
+  var resumen='<p class="hint">'+ent+' de '+r.filas.length+' entregaron su cronograma · último cierre automático: '+esc(r.ultimo_cierre||'nunca')+'</p>';
+  var acciones='<div class="admin-ctl"><button type="button" class="btn-ctl accion" onclick="cargarVerifCr()">Verificación al azar</button>'+
+    '<button type="button" class="btn-ctl reload" onclick="cargarJefesCr()">Jefes inmediatos</button>'+
+    '<button type="button" class="btn-ctl reload" onclick="cierreManualCr()">Correr cierre semanal</button></div>';
+  var tabla='<div class="admin-tbl-wrap"><table><thead><tr><th>Promotor</th><th>Programado</th><th>Cierre</th><th>Cumpl.</th><th>🟢 / 🟡 / ⚪</th><th>Alertas</th><th></th></tr></thead><tbody>'+
+    r.filas.map(function(f){return '<tr><td>'+esc(f.nombre)+'<div class="anl-unidad">'+esc(f.unidad)+'</div></td>'+
+      '<td>'+esc(ETQ_PROG[f.programado]||'')+'</td><td>'+esc(ETQ_CIERRE[f.cierre]||'—')+(f.tardio_cierre?' (tarde)':'')+'</td>'+
+      '<td>'+(f.n_prog?esc(f.pct)+'%':'—')+'</td><td>'+esc(f.n_verde)+' / '+esc(f.n_amarillo)+' / '+esc(f.n_blanco)+'</td>'+
+      '<td>'+esc(f.alertas||'')+'</td><td><button type="button" class="btn-ctl btn-mini accion" data-c="'+escA(f.clave)+'" onclick="abrirDetalleCr(this.dataset.c)">Ver</button></td></tr>';}).join('')+'</tbody></table></div>';
+  el('tabCronogramas').innerHTML=sel+resumen+acciones+'<div id="crExtra"></div>'+tabla;
+}
+
+function abrirDetalleCr(clave){
+  el('crTitulo').textContent='Cronograma';el('crCuerpo').innerHTML='<p class="anl-vacio">Cargando…</p>';abrirModal('modalCrono');
+  Promise.all([callBackend({action:'crono_detalle',promotor_clave:clave,semana_id:CR_SEM,key:adminKey}),callBackend({action:'crono_tendencia',promotor_clave:clave,key:adminKey})]).then(function(res){
+    var d=res[0],t=res[1];if(!d||!d.ok){el('crCuerpo').innerHTML='<p class="anl-vacio">'+esc((d&&d.error)||'Error.')+'</p>';return;}
+    el('crTitulo').textContent=d.identidad.promotor_nombre;el('crCuerpo').innerHTML=htmlDetalleCr(d,(t&&t.ok)?t.serie:[]);
+  }).catch(function(){el('crCuerpo').innerHTML='<p class="anl-vacio">Error de conexión.</p>';});
+}
+
+function htmlDiaCr(d,r,l){
+  var f=d.semana.fechas[l],ev=d.evidencias.filter(function(e){return e.renglon_id===r.renglon_id&&e.dia===f;})[0];
+  var no=r.dias_no&&r.dias_no[l];
+  var est=r.dias_real.indexOf(l)!==-1?(ev?(ICO_NIVEL[ev.nivel]||'✔'):'✔'):(no?'✕ no realizada ('+esc(no.motivo+(no.texto?': '+no.texto:''))+')':'· sin marcar');
+  var extra='';
+  if(ev){
+    if(ev.foto_url)extra+=' · <a href="'+escA(ev.foto_url)+'" target="_blank" rel="noopener">foto</a>';
+    if(ev.lat!==''&&ev.lng!=='')extra+=' · <a href="'+escA('https://www.google.com/maps?q='+encodeURIComponent(ev.lat+','+ev.lng))+'" target="_blank" rel="noopener">mapa</a> ±'+esc(ev.precision_m)+' m';
+    if(ev.dist_lugar_m!=='')extra+=' · a '+esc(ev.dist_lugar_m)+' m del lugar';
+    if(ev.motivo_nivel&&ev.motivo_nivel!=='sin_foto')extra+=' · '+esc(ev.motivo_nivel);
+    if(ev.exif_fecha&&ev.exif_fecha!==f)extra+=' · foto tomada el '+esc(ev.exif_fecha);
+    if(ev.verificacion)extra+=' · verificación: '+esc(ev.verificacion);
+  }
+  return '<li>'+esc(l+' '+f.substring(5)+': ')+est+extra+'</li>';
+}
+
+function htmlDetalleCr(d,serie){
+  var s=d.semana,c=s.cabecera,h='<p class="hint">'+esc(d.identidad.unidad)+' · semana del '+esc(s.semana_id)+'</p>';
+  if(!c)h+='<p class="anl-vacio">No entregó cronograma esta semana.</p>';
+  else h+='<p><b>'+esc(c.estatus==='cerrada'?'Cerrada':(s.estado_tiempo==='abierta'?'Abierta':'Vencida'))+'</b> · entregado '+esc(c.ts_programado)+(c.tardio_programado?' (tarde)':'')+' · '+esc(c.pct_cumplimiento)+'% cumplido</p>';
+  h+=s.renglones.map(function(r){
+    var dias=DIAS_A.filter(function(l){return r.dias_prog.indexOf(l)!==-1;}).map(function(l){return htmlDiaCr(d,r,l);}).join('');
+    var cambios=(r.log_cambios||[]).map(function(x){return '<li>'+esc(x.ts)+' · '+esc(x.campo)+': '+esc(x.antes)+' → '+esc(x.despues)+'</li>';}).join('');
+    return '<div class="anl-det"><b>'+esc(r.actividad_nombre)+(r.detalle?' · '+esc(r.detalle):'')+'</b><div class="anl-unidad">'+esc([r.lugar_general,r.lugar_especifico].filter(Boolean).join(' — '))+' · '+esc(r.hora_ini)+'–'+esc(r.hora_fin)+(r.origen!=='nuevo'?' · '+esc(r.origen):'')+'</div><ul>'+dias+'</ul>'+(cambios?'<details><summary>Cambios después de enviar</summary><ul>'+cambios+'</ul></details>':'')+'</div>';
+  }).join('');
+  if(d.lugares.length)h+='<h4>Lugares aprendidos</h4><ul>'+d.lugares.map(function(l){var conRef=l.lat_ref!=='';return '<li>'+esc(l.lugar_texto)+' · '+(conRef?'con referencia':'sin referencia')+' · '+esc(l.n_usos)+' usos'+(conRef?' <button type="button" class="btn-ctl btn-mini reload" data-c="'+escA(d.identidad.promotor_clave)+'" data-l="'+escA(l.lugar_clave)+'" onclick="reiniciarLugarCr(this)">Reiniciar</button>':'')+'</li>';}).join('')+'</ul>';
+  if(d.alertas.length)h+='<h4>Alertas</h4><ul>'+d.alertas.map(function(a){return '<li>['+esc(a.severidad)+'] '+esc(a.detalle)+' ('+esc(a.estatus)+')</li>';}).join('')+'</ul>';
+  if(serie.length)h+='<h4>Últimas 8 semanas</h4><ul>'+serie.map(function(x){return '<li>'+esc(x.semana_id)+': '+(x.estatus==='sin_entregar'?'sin entregar':esc(x.pct)+'% · '+esc(x.n_verde)+' 🟢 de '+esc(x.n_real)+' realizadas')+'</li>';}).join('')+'</ul>';
+  return h;
+}
+
+function reiniciarLugarCr(btn){
+  var c=btn.dataset.c,l=btn.dataset.l;
+  confirmar({titulo:'¿Reiniciar la referencia del lugar?',cuerpo:'La siguiente foto comprobada en ese lugar fijará la nueva referencia.',ok:'Reiniciar'}).then(function(ok){if(!ok)return;callBackend({action:'crono_lugar_reiniciar',promotor_clave:c,lugar_clave:l,key:adminKey}).then(function(r){if(!r||!r.ok){toast((r&&r.error)||'Error.',true);return;}toast('Referencia reiniciada.');abrirDetalleCr(c);}).catch(function(){toast('Error de conexión.',true);});});
+}
+
+function cargarVerifCr(){
+  var box=el('crExtra');box.innerHTML='<p class="anl-vacio">Cargando…</p>';
+  callBackend({action:'crono_verif_sugerir',semana_id:CR_SEM,key:adminKey}).then(function(r){
+    if(!r||!r.ok){box.innerHTML='<p class="anl-vacio">'+esc((r&&r.error)||'Error.')+'</p>';return;}
+    function fila(v,sug){return '<div class="anl-det"><b>'+esc(v.nombre)+'</b> · '+esc(v.actividad_nombre)+(v.detalle?' · '+esc(v.detalle):'')+
+      '<div class="anl-unidad">'+esc(v.dia)+' · '+esc(v.horario)+' · '+esc(v.lugar)+' · '+(ICO_NIVEL[v.nivel]||'')+'</div>'+
+      (sug?'<div class="admin-ctl"><button type="button" class="btn-ctl btn-mini reload" data-c="'+escA(v.promotor_clave)+'" onclick="abrirDetalleCr(this.dataset.c)">Ver evidencia</button>'+
+        '<button type="button" class="btn-ctl btn-mini abrir" data-e="'+escA(v.evid_id)+'" onclick="registrarVerifCr(this,\'verificada\')">Verificada</button><button type="button" class="btn-ctl btn-mini cerrar" data-e="'+escA(v.evid_id)+'" onclick="registrarVerifCr(this,\'no_coincide\')">No coincide</button></div>'
+        :'<div class="anl-unidad">Resultado: '+esc(v.verificacion)+(v.verificacion_nota?' · '+esc(v.verificacion_nota):'')+'</div>')+'</div>';}
+    box.innerHTML='<h4>Verificación al azar · semana del '+esc(CR_SEM)+'</h4><p class="hint">Llama o visita estos lugares en el horario indicado. Las ⚪ y 🟡 salen con más frecuencia.</p>'+
+      (r.sugeridas.length?r.sugeridas.map(function(v){return fila(v,true);}).join(''):'<p class="anl-vacio">No hay actividades realizadas por verificar esta semana.</p>')+
+      (r.verificadas.length?'<h4>Ya verificadas</h4>'+r.verificadas.map(function(v){return fila(v,false);}).join(''):'');
+  }).catch(function(){box.innerHTML='<p class="anl-vacio">Error de conexión.</p>';});
+}
+
+function registrarVerifCr(btn,resultado){
+  var evid=btn.dataset.e;
+  confirmar({titulo:resultado==='verificada'?'Marcar como verificada':'Marcar que no coincide',cuerpo:'Anota con quién hablaste o qué viste.',pedirMotivo:'Nota',ok:'Guardar'}).then(function(nota){if(!nota)return;callBackend({action:'crono_verif_registrar',evid_id:evid,resultado:resultado,nota:nota,key:adminKey}).then(function(r){if(!r||!r.ok){toast((r&&r.error)||'Error.',true);return;}toast('Verificación registrada.');cargarVerifCr();}).catch(function(){toast('Error de conexión.',true);});});
+}
+
+function cargarJefesCr(){
+  var box=el('crExtra');box.innerHTML='<p class="anl-vacio">Cargando…</p>';
+  callBackend({action:'crono_jefes',key:adminKey}).then(function(r){
+    if(!r||!r.ok){box.innerHTML='<p class="anl-vacio">'+esc((r&&r.error)||'Error.')+'</p>';return;}
+    var sin=r.jefes.filter(function(j){return j.sin_jefe;}).length;
+    box.innerHTML='<h4>Jefes inmediatos</h4><p class="hint">'+(r.jefes.length?sin+' de '+r.jefes.length+' unidades sin jefe registrado. Llena nombre y correo en la hoja CRONO_JEFES; los correos de los lunes empiezan solos.':'La hoja CRONO_JEFES está vacía: ejecuta prepararHojaJefes() desde el editor de Apps Script.')+'</p>'+
+      '<div class="admin-tbl-wrap"><table><thead><tr><th>Unidad</th><th>Jefe</th><th>Correo</th><th>Promotores</th><th>Enlace</th></tr></thead><tbody>'+r.jefes.map(function(j){return '<tr><td>'+esc(j.unidad)+'</td><td>'+esc(j.jefe_nombre||'—')+'</td><td>'+(j.jefe_correo?esc(j.jefe_correo)+(j.correo_valido?'':' ⚠'):'—')+'</td><td>'+esc(j.n_promotores)+'</td><td><button type="button" class="btn-ctl btn-mini accion" data-u="'+escA(j.enlace)+'" onclick="copiarEnlaceCr(this.dataset.u)">Copiar</button> <button type="button" class="btn-ctl btn-mini reload" data-c="'+escA(j.clues)+'" data-n="'+escA(j.unidad)+'" onclick="regenerarJefeCr(this)">Nuevo enlace</button></td></tr>';}).join('')+'</tbody></table></div>';
+  }).catch(function(){box.innerHTML='<p class="anl-vacio">Error de conexión.</p>';});
+}
+function copiarEnlaceCr(u){var p=navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject();p.then(function(){toast('Enlace copiado.');}).catch(function(){confirmar({titulo:'Copia el enlace',ok:'Listo',cancelar:'Cerrar',cuerpo:'<input type="text" readonly value="'+escA(u)+'" style="width:100%" onfocus="this.select()">'});});}
+function regenerarJefeCr(btn){var clues=btn.dataset.c,unidad=btn.dataset.n;confirmar({titulo:'¿Generar un enlace nuevo?',cuerpo:'El enlace anterior de '+esc(unidad)+' dejará de funcionar.',ok:'Generar',peligro:true}).then(function(ok){if(!ok)return;callBackend({action:'crono_jefe_token_regenerar',clues:clues,unidad:unidad,key:adminKey}).then(function(r){if(!r||!r.ok){toast((r&&r.error)||'Error.',true);return;}toast('Enlace nuevo generado.');cargarJefesCr();}).catch(function(){toast('Error de conexión.',true);});});}
+function cierreManualCr(){confirmar({titulo:'¿Correr el cierre semanal?',cuerpo:'Marca las semanas vencidas, recalcula las alertas y envía los correos de esta semana si aún no se enviaron.',ok:'Correr'}).then(function(ok){if(!ok)return;setSyncStatus('spin','Ejecutando…');callBackend({action:'crono_cierre_manual',key:adminKey}).then(function(r){setSyncStatus('ok','En línea');if(!r||!r.ok){toast((r&&r.error)||'Error.',true);return;}toast(r.vencidas+' vencidas · '+r.alertas_nuevas+' alertas nuevas · '+r.correos.enviados+' correos.');cargarCronogramas();}).catch(function(){setSyncStatus('ok','En línea');toast('Sigue ejecutándose en el servidor. Recarga la pestaña en un minuto.');});});}
 
 // ---- Pestaña Histórico: DECLARADO vs CAPTURADO ----
 var HIST=null;
