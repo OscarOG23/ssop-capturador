@@ -496,6 +496,7 @@ tr:hover td{background:var(--gxl)}
         <tbody id="adminTbody"></tbody>
       </table>
     </div>
+    <div id="recInactivas"></div>
 
     <!-- Recordatorios por WhatsApp -->
     <div class="avance-tit" style="margin-top:26px">Recordar a pendientes</div>
@@ -612,9 +613,21 @@ var ENLACE_CAPTURADOR_PAGES='https://oscarog23.github.io/ssop-capturador/';
 
 function esDeCampo(p){return !!p&&p.adscripcion!=='oficina';}
 
-/* Recepción solo lista al personal de campo: oficina no reporta por el
-   capturador, así que contarlo como «Pendiente» era ruido. */
-function filtrarRecepcion(proms){return (proms||[]).filter(esDeCampo);}
+/* Baja = ya no está en la jurisdicción: columna baja con fecha (o cualquier valor distinto de vacío/0). */
+function estaDeBajaP(p){var b=String((p&&p.baja)||'').trim();return b!==''&&b!=='0';}
+
+/* Recepción solo lista al personal de campo ACTIVO y vigente: oficina no reporta
+   por el capturador, una plaza inactiva no reporta y una baja ya no está. Contarlos
+   como «Pendiente» era ruido. */
+function filtrarRecepcion(proms){
+  return (proms||[]).filter(function(p){return esDeCampo(p)&&p.activo!=='0'&&!estaDeBajaP(p);});
+}
+
+/* Plazas inactivas (activo=0, sin baja): no cuentan, pero se dejan a la vista
+   plegadas para poder reactivarlas desde el panel. */
+function inactivasRecepcion(proms){
+  return (proms||[]).filter(function(p){return esDeCampo(p)&&p.activo==='0'&&!estaDeBajaP(p);});
+}
 
 /* Contadores de Recepción. «Enviados» cuenta solo a quien aparece en la lista
    filtrada: los reportes de oficina (se capturan en Cierre) y los de claves que
@@ -633,9 +646,7 @@ function pendientesRecordatorio(proms,reportes){
   var rpt={};
   (reportes||[]).forEach(function(r){rpt[r.promotor_clave]=r;});
   return (proms||[]).filter(function(p){
-    if(!esDeCampo(p)||p.activo==='0')return false;
-    var baja=String(p.baja||'').trim();
-    if(baja&&baja!=='0')return false;
+    if(!esDeCampo(p)||p.activo==='0'||estaDeBajaP(p))return false;
     var r=rpt[p.clave];
     return !r||r.estatus==='en_correccion';
   });
@@ -1014,8 +1025,9 @@ function renderAdminDash(r){
     '<div class="admin-stat" style="border-left:3px solid var(--ve)"><strong>'+cnt.enviados+'</strong>Enviados</div>'+
     '<div class="admin-stat" style="border-left:3px solid var(--ro)"><strong>'+cnt.pendientes+'</strong>Pendientes</div>';
 
+  var inact=inactivasRecepcion(r.promotores).sort(function(a,b){return(a.nombre||'').localeCompare(b.nombre||'');});
   window._promMap={};
-  proms.forEach(function(p){window._promMap[p.clave]=p;});
+  proms.concat(inact).forEach(function(p){window._promMap[p.clave]=p;});
 
   el('adminTbody').innerHTML=proms.map(function(p){
     var rep=rptMap[p.clave];
@@ -1040,7 +1052,24 @@ function renderAdminDash(r){
       tdMeta(rep.periodicos_murales,'MURAL')+tdMeta(rep.cronogramas,null)+
       estadoCell+'</tr>';
   }).join('');
+  renderInactivas(inact);
   renderRecordatorios();
+}
+
+/* Plazas inactivas: plegadas y fuera de los contadores, pero a un clic para reactivarlas. */
+function renderInactivas(inact){
+  var cont=el('recInactivas');
+  if(!cont)return;
+  if(!inact.length){cont.innerHTML='';return;}
+  cont.innerHTML='<details style="margin-top:12px"><summary>Plazas inactivas ('+inact.length+')</summary>'+
+    '<div class="admin-tbl-wrap"><table><thead><tr><th>Promotor</th><th>Unidad</th><th></th></tr></thead><tbody>'+
+    inact.map(function(p){
+      var nom=p.nombre||p.clave;
+      return '<tr><td style="font-size:12px">'+esc(nom)+'</td>'+
+        '<td style="font-size:12px">'+esc(p.unidad||'—')+'</td>'+
+        '<td><button type="button" class="btn-ctl reload" data-clave="'+escA(p.clave)+'" onclick="abrirEditFromRow(this)" '+
+        'aria-label="Editar a '+escA(nom)+'">Editar</button></td></tr>';
+    }).join('')+'</tbody></table></div></details>';
 }
 
 // ===== PANEL ANALÍTICO (pestañas Análisis / Cierre) =====
