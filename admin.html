@@ -142,7 +142,7 @@ label{
   margin-bottom:6px;margin-top:18px;color:var(--gd);
   line-height:1.45;
 }
-select,input[type=text],input[type=number],input[type=password],input[type=month],input[type=date],textarea{
+select,input[type=text],input[type=number],input[type=password],input[type=month],input[type=date],input[type=tel],textarea{
   width:100%;border:1.5px solid var(--bd);border-radius:var(--r2);
   padding:11px 14px;font-size:16px;/* <16px provoca zoom automático en iOS al enfocar */
   font-family:inherit;font-weight:500;
@@ -212,6 +212,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 }
 /* rojo/verde SOLO para cerrar/abrir recepción. Cualquier otra acción usa
    .accion (guinda) o .reload (neutra). */
+a.btn-ctl{text-decoration:none;display:inline-flex}
 .btn-ctl.cerrar{background:var(--ro-bg);color:var(--ro)}
 .btn-ctl.abrir{background:var(--ve-bg);color:var(--ve)}
 .btn-ctl.accion{background:var(--gxl);color:var(--gd);border:1px solid rgba(138,30,50,.28)}
@@ -496,6 +497,10 @@ tr:hover td{background:var(--gxl)}
       </table>
     </div>
 
+    <!-- Recordatorios por WhatsApp -->
+    <div class="avance-tit" style="margin-top:26px">Recordar a pendientes</div>
+    <div id="recordatorios"><p class="anl-vacio">Cargando…</p></div>
+
     <!-- FASE 2: cotejo de tres vías -->
     <div class="avance-tit" style="margin-top:26px">Alertas &middot; cotejo de tres v&iacute;as</div>
     <div class="admin-ctl">
@@ -544,6 +549,8 @@ tr:hover td{background:var(--gxl)}
     <input type="text" id="editUnidad" placeholder="Nombre de la unidad donde captura">
     <label style="margin-top:12px" for="editClues">CLUES operativa</label>
     <input type="text" id="editClues" placeholder="MCIMB000000">
+    <label style="margin-top:12px" for="editTelefono">Tel&eacute;fono (WhatsApp)</label>
+    <input type="tel" id="editTelefono" inputmode="tel" autocomplete="off" placeholder="10 d&iacute;gitos, p. ej. 5512345678">
     <label style="margin-top:12px" for="editVigente">Vigente desde</label>
     <input type="month" id="editVigente">
     <div style="margin-top:18px;display:flex;align-items:center;gap:12px">
@@ -596,6 +603,91 @@ tr:hover td{background:var(--gxl)}
    Servido por Apps Script esto ni se usa: ahí manda google.script.run. */
 var ENDPOINT_DEFAULT = 'https://script.google.com/macros/s/AKfycbygXHFeDDQ2MWTwYoxN2xDd-RitXKUk6--xm3oltO4ZU-MtUVTbnkeEc9qHYgN3Y_8/exec';
 
+
+/*<admin-puro>*/
+/* Lógica sin DOM del panel: qué se muestra en Recepción y qué se manda por
+   WhatsApp. Vive aquí (no en un archivo aparte) porque admin.html se sirve como
+   un solo documento; las pruebas de Node cargan solo este bloque. ES5. */
+var ENLACE_CAPTURADOR_PAGES='https://oscarog23.github.io/ssop-capturador/';
+
+function esDeCampo(p){return !!p&&p.adscripcion!=='oficina';}
+
+/* Recepción solo lista al personal de campo: oficina no reporta por el
+   capturador, así que contarlo como «Pendiente» era ruido. */
+function filtrarRecepcion(proms){return (proms||[]).filter(esDeCampo);}
+
+/* Contadores de Recepción. «Enviados» cuenta solo a quien aparece en la lista
+   filtrada: los reportes de oficina (se capturan en Cierre) y los de claves que
+   ya no están en el catálogo no son «Enviados» de campo. */
+function resumenRecepcion(proms,reportes){
+  var lista=filtrarRecepcion(proms);
+  var rpt={};
+  (reportes||[]).forEach(function(r){rpt[r.promotor_clave]=true;});
+  var enviados=lista.filter(function(p){return rpt[p.clave];}).length;
+  return {total:lista.length,enviados:enviados,pendientes:lista.length-enviados};
+}
+
+/* Pendiente de recordatorio: campo, activo, sin baja, y que no haya enviado su
+   reporte del periodo (sin fila vigente, o reabierto en corrección). */
+function pendientesRecordatorio(proms,reportes){
+  var rpt={};
+  (reportes||[]).forEach(function(r){rpt[r.promotor_clave]=r;});
+  return (proms||[]).filter(function(p){
+    if(!esDeCampo(p)||p.activo==='0')return false;
+    var baja=String(p.baja||'').trim();
+    if(baja&&baja!=='0')return false;
+    var r=rpt[p.clave];
+    return !r||r.estatus==='en_correccion';
+  });
+}
+
+/* Devuelve el número con lada de país (52 + 10 dígitos) o '' si no es válido.
+   Un número nacional mexicano nunca empieza con 0 ni 1, así que los prefijos
+   044/045/01 se rechazan a propósito: es mejor no mandar que mandar a un
+   número equivocado. */
+function normalizarTelefono(t){
+  var d=String(t==null?'':t).replace(/\D/g,'');
+  var n='';
+  if(d.length===10)n=d;
+  else if(d.length===12&&d.indexOf('52')===0)n=d.slice(2);
+  else if(d.length===13&&d.indexOf('521')===0)n=d.slice(3);
+  return /^[2-9]/.test(n)?'52'+n:'';
+}
+
+/* El enlace va en su propia línea: WhatsApp se come el punto final y rompe el
+   enlace si va pegado a la URL. */
+function mensajeRecordatorio(nombre,periodoEtq,enlace,fechaLimite){
+  var m='Hola '+nombre+', te recordamos que aún falta tu reporte de productividad de '+periodoEtq+'.';
+  var f=String(fechaLimite||'').trim().replace(/\.+$/,'');
+  if(f)m+=' Fecha límite: '+f+'.';
+  return m+'\nCaptúralo aquí:\n'+enlace+'\n\nGracias. Coordinación de Promoción de la Salud, JS XIX Texcoco.';
+}
+
+function enlaceWhatsapp(tel,mensaje){
+  return tel?'https://wa.me/'+tel+'?text='+encodeURIComponent(mensaje):'';
+}
+
+/* En Pages el capturador vive en la carpeta de admin.html. Servido por Apps
+   Script la página corre en un iframe de googleusercontent y su dirección no
+   sirve, así que se usa la de Pages. */
+function enlaceCapturador(href){
+  var h=String(href||'').split('#')[0].split('?')[0];
+  if(/^https:\/\/[^\/]+\.github\.io\//.test(h))return h.replace(/[^\/]*$/,'');
+  return ENLACE_CAPTURADOR_PAGES;
+}
+
+/* Quién queda sin estimar tras «Generar mes». Las bajas marcadas a propósito
+   en el catálogo no avisan; sí las que se descartaron por inactividad. */
+function avisosEstimacion(est){
+  est=est||{};
+  var out=[];
+  (est.sin_base||[]).forEach(function(s){out.push(s.nombre+' — solo '+s.meses+' meses reales');});
+  (est.bajas||[]).forEach(function(b){
+    if(b.ultimo)out.push(b.nombre+' — '+b.motivo+' (último: '+b.ultimo+')');
+  });
+  return out;
+}
+/*</admin-puro>*/
 
 // ===== SVG ICONS (reutilizables en JS) =====
 var ICO_CHECK='<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
@@ -893,6 +985,8 @@ function cargarAdmin(){
     setSyncStatus('ok','En línea');
     if(!r||!r.ok){toast(r&&r.error||'Contraseña incorrecta.',true);return;}
     ocul('adminLogin');show('adminDash');
+    // Las marcas «abierto» de los recordatorios valen para un solo periodo.
+    if(_recPeriodo!==periodo){_recEnviados={};_recPeriodo=periodo;}
     ADM=r;
     renderAdminDash(r);
     cargarAlertas();
@@ -913,12 +1007,12 @@ function renderAdminDash(r){
 
   var rptMap={};
   (r.reportes||[]).forEach(function(rep){rptMap[rep.promotor_clave]=rep;});
-  var proms=(r.promotores||[]).slice().sort(function(a,b){return(a.nombre||'').localeCompare(b.nombre||'');});
-  var total=proms.length,enviados=Object.keys(rptMap).length;
+  var proms=filtrarRecepcion(r.promotores).sort(function(a,b){return(a.nombre||'').localeCompare(b.nombre||'');});
+  var cnt=resumenRecepcion(r.promotores,r.reportes);
   el('adminStats').innerHTML=
-    '<div class="admin-stat"><strong>'+total+'</strong>Promotores</div>'+
-    '<div class="admin-stat" style="border-left:3px solid var(--ve)"><strong>'+enviados+'</strong>Enviados</div>'+
-    '<div class="admin-stat" style="border-left:3px solid var(--ro)"><strong>'+(total-enviados)+'</strong>Pendientes</div>';
+    '<div class="admin-stat"><strong>'+cnt.total+'</strong>Promotores</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--ve)"><strong>'+cnt.enviados+'</strong>Enviados</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--ro)"><strong>'+cnt.pendientes+'</strong>Pendientes</div>';
 
   window._promMap={};
   proms.forEach(function(p){window._promMap[p.clave]=p;});
@@ -946,6 +1040,7 @@ function renderAdminDash(r){
       tdMeta(rep.periodicos_murales,'MURAL')+tdMeta(rep.cronogramas,null)+
       estadoCell+'</tr>';
   }).join('');
+  renderRecordatorios();
 }
 
 // ===== PANEL ANALÍTICO (pestañas Análisis / Cierre) =====
@@ -1367,7 +1462,7 @@ function renderCierre(){
     }).join('');
     return '<div class="anl-det" style="box-shadow:var(--s0);border-color:var(--bd)">'+
       '<h3 style="font-size:13px">'+esc(o.promotor_nombre)+
-        (o.capturado?'':' <span class="anl-chip baja">sin capturar</span>')+'</h3>'+
+        (o.capturado?'':' <span class="anl-chip baja">sin capturar (se estimar&aacute; al generar)</span>')+'</h3>'+
       '<div class="ofi-grid">'+inputs+'</div>'+
       '<button type="button" class="btn-ctl accion" style="margin-top:10px" '+
         'onclick="guardarOficina(\''+esc(o.promotor_clave)+'\')">Guardar cifras</button>'+
@@ -1386,10 +1481,12 @@ function renderCierre(){
 
     '<div class="avance-tit" style="margin-top:26px">2 &middot; Plazas inactivas y oficina</div>'+
     '<p style="font-size:11px;color:var(--mu);margin:0 0 8px">'+
+      'Se aplica sola al generar el libro (paso 3); aqu&iacute; puedes revisarla antes. '+
       'Se estima con la mediana de los meses que esa persona s&iacute; report&oacute; (m&iacute;nimo 3), '+
       'tanto para plazas inactivas como para el personal de oficina. '+
       'Lo que hayas capturado arriba manda: a esa persona no se le estima encima. '+
-      'Qui&eacute;n lleve m&aacute;s de 3 meses sin reportar se considera baja y queda fuera.</p>'+
+      'Una plaza inactiva con m&aacute;s de 3 meses sin reportar se considera baja y queda fuera. '+
+      'El personal de oficina no: su salida se marca con <code>baja</code> en CAT_PROMOTORES.</p>'+
     '<div class="admin-ctl">'+
       '<button type="button" class="btn-ctl reload" onclick="estimar(false)">Revisar estimaci&oacute;n</button>'+
       '<button type="button" class="btn-ctl accion" onclick="estimar(true)">Aplicar estimaci&oacute;n</button>'+
@@ -1486,14 +1583,32 @@ function pintarResultadoLibro(r){
     el('cierreResultado').innerHTML='<span style="color:var(--ro)">'+esc((r&&r.error)||'Error al generar.')+'</span>';
     return;
   }
+  var avisos=[];
+  (r.resumen||[]).forEach(function(m){
+    avisosEstimacion(m.estimacion).forEach(function(a){avisos.push(nombreMesCliente(m.periodo)+': '+a);});
+  });
+  var aviso=avisos.length
+    ?'<div class="anl-muertos" style="border-left-color:var(--ro)"><strong>Sin estimar: el formato queda incompleto</strong>'+
+       avisos.map(esc).join('<br>')+'<br>Si son de oficina, capt&uacute;ralos a mano en el paso 1 y vuelve a generar. '+
+       'Si son plazas inactivas, decide en CAT_PROMOTORES: m&aacute;rcalos con <code>baja</code> o ajusta MESES_MAX_INACTIVIDAD.</div>'
+    :'';
+  // «Sin recuadro rojo» no significa «archivo completo»: quien aún no reporta este mes no sale en el archivo.
+  var nota='';
+  if(ADM&&(r.resumen||[]).length===1&&ADM.periodo===r.resumen[0].periodo){
+    var falt=pendientesRecordatorio(ADM.promotores,ADM.reportes);
+    if(falt.length)nota='<p style="color:var(--mu);font-size:12px"><strong>A&uacute;n sin reporte este mes (no aparecen en el archivo)</strong><br>'+
+      falt.map(function(p){return esc(p.nombre||p.clave);}).join(' &middot; ')+'</p>';
+  }
   var filas=(r.resumen||[]).map(function(m){
     return '<tr><td>'+esc(nombreMesCliente(m.periodo))+'</td><td>'+m.filas+'</td>'+
+      '<td>'+(m.estimacion?m.estimacion.estimadas:'—')+'</td>'+
       '<td><strong>'+m.totales[0]+'</strong></td></tr>';
   }).join('');
   el('cierreResultado').innerHTML=
     '<p><a href="'+esc(r.url)+'" target="_blank">Abrir en Google Sheets</a> &nbsp;&middot;&nbsp; '+
     '<a href="'+esc(r.xlsx)+'" target="_blank"><strong>Descargar .xlsx</strong></a></p>'+
-    '<div class="admin-tbl-wrap"><table><thead><tr><th>Mes</th><th>Filas</th><th>TVF</th></tr></thead>'+
+    aviso+nota+
+    '<div class="admin-tbl-wrap"><table><thead><tr><th>Mes</th><th>Filas</th><th>Estimadas</th><th>TVF</th></tr></thead>'+
     '<tbody>'+filas+'</tbody></table></div>';
   HIST=null;
 }
@@ -1646,9 +1761,76 @@ function marcarAlerta(folio,estatus){
   }).catch(function(){toast('Error de conexión.',true);});
 }
 
+// ===== RECORDATORIOS POR WHATSAPP =====
+var _recPeriodo='';    // periodo de la última carga de Recepción
+var _recEnviados={};   // clave → true (se abrió WhatsApp); solo en memoria (el admin no usa localStorage)
+
+// El periodo sale del mismo payload que el listado, para que el mensaje no se desfase.
+function periodoRecordatorio(){
+  return (ADM&&ADM.periodo)||el('adminPeriodo').value||PERIODO;
+}
+
+// Enlace wa.me con el mensaje armado ahora (incluye la fecha límite escrita en ese momento).
+// Devuelve '' si el promotor no tiene un teléfono válido.
+function urlRecordatorio(clave){
+  var tel=normalizarTelefono(((ADM&&ADM.telefonos)||{})[clave]);
+  if(!tel)return '';
+  var p=(window._promMap||{})[clave]||{};
+  var msg=mensajeRecordatorio(p.nombre||clave,periodoLabel(periodoRecordatorio()),enlaceCapturador(location.href),
+                              el('recFecha')?el('recFecha').value:'');
+  return enlaceWhatsapp(tel,msg);
+}
+
+function renderRecordatorios(){
+  var cont=el('recordatorios');
+  if(!cont||!ADM)return;
+  var fechaPrev=el('recFecha')?el('recFecha').value:'';
+  var per=periodoRecordatorio();
+  var pend=pendientesRecordatorio(ADM.promotores,ADM.reportes);
+  var tels=ADM.telefonos||{};
+  if(!pend.length){
+    cont.innerHTML='<p class="anl-vacio">Nadie pendiente en '+esc(periodoLabel(per))+'.</p>';
+    return;
+  }
+  var filas=pend.map(function(p){
+    var crudo=tels[p.clave];
+    var valido=normalizarTelefono(crudo);
+    var nom=p.nombre||p.clave;
+    var abierto=_recEnviados[p.clave]?' <span class="anl-chip">abierto</span>':'';
+    var accion=valido
+      ?'<a class="btn-ctl accion" target="_blank" rel="noopener" data-clave="'+escA(p.clave)+'" href="'+escA(urlRecordatorio(p.clave))+'" '+
+       'onclick="alAbrirRecordatorio(this)" aria-label="Recordar por WhatsApp a '+escA(nom)+'">WhatsApp</a>'
+      :'<span style="color:var(--ro);font-size:12px">'+(crudo?'Teléfono inválido':'Sin teléfono')+'</span> '+
+       '<button type="button" class="btn-ctl reload" data-clave="'+escA(p.clave)+'" onclick="abrirEditFromRow(this)" '+
+       'aria-label="Editar a '+escA(nom)+'">Editar</button>';
+    return '<tr><td style="font-size:12px">'+esc(nom)+abierto+'</td>'+
+      '<td style="font-size:12px">'+esc(p.unidad||'—')+'</td><td>'+accion+'</td></tr>';
+  }).join('');
+  cont.innerHTML=
+    '<label for="recFecha" style="font-size:12px">Fecha l&iacute;mite (opcional)</label>'+
+    '<input type="text" id="recFecha" placeholder="p. ej. viernes 10" style="margin-bottom:10px">'+
+    '<div class="admin-tbl-wrap"><table><thead><tr><th>Promotor</th><th>Unidad</th><th>Recordatorio</th></tr></thead>'+
+    '<tbody>'+filas+'</tbody></table></div>';
+  el('recFecha').value=fechaPrev;
+}
+
+// Se llama al tocar el enlace, antes de navegar: no hay preventDefault, así que la
+// navegación usa el href ya actualizado con la fecha límite escrita justo ahora.
+// Abrir WhatsApp no prueba que se mandó, por eso el chip dice «abierto».
+function alAbrirRecordatorio(a){
+  var clave=a.dataset.clave;
+  var url=urlRecordatorio(clave);
+  if(url)a.href=url;
+  _recEnviados[clave]=true;
+  var tr=a.closest?a.closest('tr'):null;
+  var td=tr&&tr.firstChild;
+  if(td&&String(td.innerHTML).indexOf('anl-chip')<0)td.innerHTML+=' <span class="anl-chip">abierto</span>';
+}
+
 // ===== EDITAR PROMOTOR =====
 var _editClave='';
 var _editActivo='1';
+var _editTelefono='';
 
 
 function abrirEditFromRow(tdEl){
@@ -1672,6 +1854,8 @@ function abrirEditPromotor(clave,p){
 
   el('editUnidad').value=p.unidad||'';
   el('editClues').value=p.clues||'';
+  _editTelefono=String(((ADM&&ADM.telefonos)||{})[clave]||'');
+  el('editTelefono').value=_editTelefono;
   el('editVigente').value=el('adminPeriodo').value||PERIODO;
   el('editRotaciones').innerHTML='';
   actualizarBtnActivo();
@@ -1715,15 +1899,33 @@ function cerrarEdit(){cerrarModal('modalEdit');}
 function guardarEditPromotor(){
   var unidad=el('editUnidad').value.trim();
   if(!unidad){toast('Escribe la unidad operativa.',true);return;}
+  var tel=el('editTelefono').value.trim();
+  var telNorm=tel?normalizarTelefono(tel):'';
+  var cambioTel=tel!==_editTelefono;
+  // Solo se valida si lo tocaron: un teléfono inválido ya guardado no bloquea otras ediciones.
+  if(cambioTel&&tel&&!telNorm){toast('El teléfono debe tener 10 dígitos.',true);return;}
   var campos={
     unidad:unidad,
     clues:el('editClues').value.trim(),
     activo:_editActivo,
     vigente_desde:el('editVigente').value||''
   };
-  // rotar_promotor escribe el catálogo y, si cambió la adscripción operativa,
-  // deja constancia en la bitácora ROTACIONES.
-  callBackend({action:'rotar_promotor',clave:_editClave,campos:campos,key:adminKey}).then(function(r){
+  // El teléfono se guarda aparte, solo si cambió y ya normalizado (solo dígitos):
+  // rotar_promotor no lo conoce, y un «+52…» sin normalizar lo leería Sheets como fórmula.
+  var guardarTel=cambioTel
+    ?callBackend({action:'actualizar_promotor',clave:_editClave,campos:{telefono:telNorm},key:adminKey})
+    :Promise.resolve({ok:true});
+  guardarTel.then(function(r){
+    if(!r||!r.ok){var e=new Error((r&&r.error)||'No se guardó el teléfono.');e.servidor=true;throw e;}
+    if(cambioTel){
+      // Coherencia: si rotar_promotor falla, un reintento no reescribe el teléfono.
+      if(ADM){ADM.telefonos=ADM.telefonos||{};ADM.telefonos[_editClave]=telNorm;}
+      _editTelefono=tel;
+    }
+    // rotar_promotor escribe el catálogo y, si cambió la adscripción operativa,
+    // deja constancia en la bitácora ROTACIONES.
+    return callBackend({action:'rotar_promotor',clave:_editClave,campos:campos,key:adminKey});
+  }).then(function(r){
     if(r&&r.ok){
       toast(r.roto?'Rotación registrada.':'Guardado correctamente.');
       cerrarEdit();
@@ -1732,7 +1934,7 @@ function guardarEditPromotor(){
     } else {
       toast(r&&r.error||'Error al guardar.',true);
     }
-  }).catch(function(){toast('Error de conexión.',true);});
+  }).catch(function(err){toast(err&&err.servidor?err.message:'Error de conexión.',true);});
 }
 
 // ===== TRANSPORT =====

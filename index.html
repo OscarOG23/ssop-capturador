@@ -1552,17 +1552,20 @@ function resolverConfirm(ok){
 
 function cargarCatalogo(){
   setSyncStatus('spin','Cargando…');
-  callBackend({action:'catalogo'}).then(function(r){
+  if(CFG.promotor_clave)renderIdentidad();
+  // Independientes: no esperar al catálogo para consultar el mes del servidor.
+  var periodos=cargarPeriodos();
+  return callBackend({action:'catalogo'}).then(function(r){
     if(r&&r.ok&&r.promotores){PROM=r.promotores;guardar(K.prom,PROM);}
     if(r&&r.ok&&r.catalogo){guardar(K.cat,r.catalogo);}
     actualizarUnidadActiva();
     if(!CFG.promotor_clave||FORZAR_SETUP){abrirSetup();}
     // Los periodos capturables los fija el servidor antes de pintar nada.
-    else{cargarPeriodos().then(verificarEstado);}
+    else{return periodos.then(verificarEstado);}
   }).catch(function(){
     setSyncStatus('err','Sin conexión');
     if(!CFG.promotor_clave||FORZAR_SETUP){abrirSetup();}
-    else{if(PROM.length)actualizarUnidadActiva();verificarEstado();}
+    else{if(PROM.length)actualizarUnidadActiva();return periodos.then(verificarEstado);}
   });
 }
 
@@ -1580,15 +1583,20 @@ function actualizarUnidadActiva(){
 }
 
 
+var _estadoPeticion=0;
 function verificarEstado(){
-  Promise.all([
-    callBackend({action:'periodo_estado',periodo:PERIODO}),
-    callBackend({action:'obtener_reporte',promotor_clave:CFG.promotor_clave,periodo:PERIODO})
+  var peticion=++_estadoPeticion,clave=CFG.promotor_clave,periodo=PERIODO;
+  function vigente(){return peticion===_estadoPeticion&&clave===CFG.promotor_clave&&periodo===PERIODO;}
+  return Promise.all([
+    callBackend({action:'periodo_estado',periodo:periodo}),
+    callBackend({action:'obtener_reporte',promotor_clave:clave,periodo:periodo})
   ]).then(function(rs){
+    if(!vigente())return;
     PERIODO_EST=(rs[0]&&rs[0].estado)||'abierto';
     REPORTE=(rs[1]&&rs[1].reporte)||null;
     mostrarApp();
   }).catch(function(){
+    if(!vigente())return;
     PERIODO_EST='abierto';REPORTE=null;
     mostrarApp();
   });
@@ -1944,7 +1952,7 @@ function enviarReporteConfirmado(form,refTotal){
   if(muralB64){reporte.evidencia_mural_b64=muralB64;reporte.evidencia_mural_mime=muralMime;}
   if(cronB64){reporte.cronogramas_b64=cronB64;reporte.cronogramas_mime=cronMime;}
 
-  callBackend({action:'reporte',reporte:reporte}).then(function(r){
+  callBackend({action:'reporte',reporte:reporte},90000).then(function(r){
     btn.disabled=false;btn.textContent='Enviar Reporte del Mes';
     if(r&&r.ok){
       guardar(K.draft,null);
@@ -2490,7 +2498,9 @@ function procesarColaCrono(){
   if(_reintentoCrono){clearTimeout(_reintentoCrono);_reintentoCrono=null;}
   var op=c[0],body=Object.assign({action:op.action},op.payload);
   if(op.action==='crono_marcar')body.reloj_cliente_envio=Date.now();
-  callBackend(body,op.action==='crono_foto'?60000:15000).then(function(r){
+  // El candado del servidor puede esperar 30 s. No reintentar a los 15 s
+  // mientras la primera ejecución todavía está pendiente de escribir.
+  callBackend(body,op.action==='crono_foto'?90000:60000).then(function(r){
     var exito=!!(r&&r.ok===true),rechazo=!!(r&&r.ok===false&&!r.reintentar);
     _colaCrono=false;
     if(!exito&&!rechazo){pintarColaCrono();reintentarColaCrono();return;}
@@ -2499,14 +2509,15 @@ function procesarColaCrono(){
       if(op.action==='crono_programar'||op.action==='crono_editar')devolverABorrador(op,r);
       else toast('No se registró un cambio: '+(r.error||'error del servidor'),true);
     }
-    pintarColaCrono();if(colaCrono().length)procesarColaCrono();else refrescarCrono();
+    pintarColaCrono();if(colaCrono().length)procesarColaCrono();else refrescarCrono(true);
   }).catch(function(){_colaCrono=false;pintarColaCrono();reintentarColaCrono();});
 }
 /* Espera creciente entre intentos: 30 s, 60 s, 120 s… hasta 5 min. */
 function reintentarColaCrono(){
   if(_reintentoCrono||!colaCrono().length)return;
   _esperaCrono=_esperaCrono?Math.min(_esperaCrono*2,300000):30000;
-  _reintentoCrono=setTimeout(function(){_reintentoCrono=null;procesarColaCrono();},_esperaCrono);
+  // Desfasar dispositivos que recuperan señal al mismo tiempo.
+  _reintentoCrono=setTimeout(function(){_reintentoCrono=null;procesarColaCrono();},_esperaCrono+Math.floor(Math.random()*5000));
 }
 /* El servidor rechazó una semana: lo capturado vuelve al borrador para que el
    promotor lo corrija y lo reenvíe, en vez de perderse. Si ya hay otro
@@ -2531,9 +2542,14 @@ function devolverABorrador(op,r){
 window.addEventListener('online',procesarColaCrono);
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')procesarColaCrono();});
 
-function refrescarCrono(){
+var _refrescoCrono=null,_refrescoCronoClave='';
+function refrescarCrono(forzar){
   if(!CFG.promotor_clave)return Promise.resolve();
-  return callBackend({action:'crono_estado',promotor_clave:CFG.promotor_clave}).then(function(r){
+  var clave=CFG.promotor_clave;
+  if(!forzar&&_refrescoCrono&&_refrescoCronoClave===clave)return _refrescoCrono;
+  _refrescoCronoClave=clave;
+  var pendiente=callBackend({action:'crono_estado',promotor_clave:clave}).then(function(r){
+    if(CFG.promotor_clave!==clave||_refrescoCrono!==pendiente)return;
     if(!r)return r;
     /* Rechazo definitivo (p. ej. el promotor no está en el piloto): se dice
        por qué y se olvida la semana guardada. Un error transitorio
@@ -2543,7 +2559,12 @@ function refrescarCrono(){
     var visible=!el('vSemana').classList.contains('oculto');
     if(visible&&['programar','historial'].indexOf(SEM_VISTA)===-1)renderSemana();
     return r;
-  }).catch(function(){});
+  }).catch(function(){}).then(function(r){
+    if(_refrescoCrono===pendiente){_refrescoCrono=null;_refrescoCronoClave='';}
+    return r;
+  });
+  _refrescoCrono=pendiente;
+  return pendiente;
 }
 function aplicarColaLocal(){colaCrono().forEach(function(op){if(op.payload.promotor_clave===CFG.promotor_clave)aplicarOpLocal(op.action,op.payload);});}
 
