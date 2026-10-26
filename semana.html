@@ -21,8 +21,8 @@
     lee los datos del Apps Script /exec.
 -->
 <style>
-:root{color-scheme:light dark;--g:#8A1E32;--o:#B78D55;--op:#F5EFE5;--o-tx:#7D6030;--ink:#1A1614;--ink2:#2D2926;--mu:#6B7280;--bd:#E8E3DD;--bd2:#F0ECE7;--pa:#FAF9F7;--wh:#FFFFFF;--ve:#166534;--ve-bg:#DCFCE7;--ro:#9B1C2E;--ro-bg:#FFE4E6;--am:#92400E;--am-bg:#FEF3C7}
-@media(prefers-color-scheme:dark){:root{--ink:#F3EFEA;--ink2:#E2DCD5;--mu:#A8A29E;--bd:#3A3431;--bd2:#2E2926;--pa:#1C1917;--wh:#24201D;--op:#2E2620;--o-tx:#D4B483;--ve-bg:#14311F;--ro-bg:#3B1219;--ro:#FDA4AF;--am-bg:#3A2A10;--am:#FCD34D}}
+:root{color-scheme:light dark;--g:#8A1E32;--o:#B78D55;--op:#F5EFE5;--o-tx:#7D6030;--ink:#1A1614;--ink2:#2D2926;--mu:#6B7280;--bd:#E8E3DD;--bd2:#F0ECE7;--pa:#FAF9F7;--wh:#FFFFFF;--ve:#166534;--ve-bg:#DCFCE7;--ro:#9B1C2E;--ro-bg:#FFE4E6;--am:#92400E;--am-bg:#FEF3C7;--az:#334E68;--az-bg:#E6EEF5}
+@media(prefers-color-scheme:dark){:root{--ink:#F3EFEA;--ink2:#E2DCD5;--mu:#A8A29E;--bd:#3A3431;--bd2:#2E2926;--pa:#1C1917;--wh:#24201D;--op:#2E2620;--o-tx:#D4B483;--ve-bg:#14311F;--ro-bg:#3B1219;--ro:#FDA4AF;--am-bg:#3A2A10;--am:#FCD34D;--az:#B8CDE3;--az-bg:#1F2B38}}
 *{box-sizing:border-box}body{margin:0;background:var(--pa);color:var(--ink);font-family:'Montserrat','Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.5}
 header{background:var(--g);color:#fff;padding:16px}header h1{margin:0;font-size:18px;font-weight:800}header p{margin:2px 0 0;font-size:13px;opacity:.9}
 main{max-width:860px;margin:0 auto;padding:16px}label{font-weight:700;font-size:14px;margin-right:6px}
@@ -35,6 +35,8 @@ select{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--bd);b
 .d.p{background:var(--op);color:var(--o-tx);border:1px solid var(--o)}.d.h{background:var(--ve);color:#fff}.d.n{background:var(--ro-bg);color:var(--ro);text-decoration:line-through}
 .cambio{font-size:12px;color:var(--am);margin-top:4px}.vacio{color:var(--mu);text-align:center;padding:24px 0}
 @media(max-width:420px){main{padding:12px}.card{padding:12px}.ren{gap:6px}.dias{flex-basis:165px;gap:2px}.d{width:25px;height:25px}}
+.incs{margin:8px 0 4px}
+.inc{background:var(--az-bg);color:var(--az);border-left:4px solid var(--az);border-radius:8px;padding:8px 10px;margin:4px 0;font-size:14px}
 </style>
 </head>
 <body>
@@ -70,10 +72,18 @@ function cargar(sid){
     el('cuerpo').innerHTML=r.promotores.length?r.promotores.map(tarjeta).join(''):'<p class="vacio">No hay personal registrado en esta unidad.</p>';
   }).catch(function(){el('cuerpo').innerHTML='<p class="vacio">Sin conexión. Intente de nuevo.</p>';});
 }
+function textoInc(x){
+  return (x.nombre||x.tipo)+' · '+fechaCorta(x.desde)+(x.hasta!==x.desde?' al '+fechaCorta(x.hasta):'')+(x.hora_ini&&x.hora_fin?', '+x.hora_ini+' a '+x.hora_fin:'');
+}
+/* Spec M11: la jefatura ve las incidencias con su tipo y fechas; nunca fotos, detalle ni contadores. */
+function incidenciasHtml(s){
+  var l=s.incidencias||[];
+  return l.length?'<div class="incs">'+l.map(function(x){return '<div class="inc"><b>Incidencia</b> · '+esc(textoInc(x))+'</div>';}).join('')+'</div>':'';
+}
 function tarjeta(p){
   var s=p.semana,c=s.cabecera,est;
-  if(!c)est='<div class="estado mal">Sin cronograma entregado</div>';
-  else if(c.estatus==='cerrada')est='<div class="estado ok">Semana cerrada · '+esc(c.pct_cumplimiento)+'% cumplido'+(c.tardio_cierre?' (cerró tarde)':'')+'</div>';
+  if(!c)est=s.cubierta?'<div class="estado ok">Semana cubierta por incidencias y calendario</div>':'<div class="estado mal">Sin cronograma entregado</div>';
+  else if(c.estatus==='cerrada')est='<div class="estado ok">Semana cerrada · '+(Number(c.n_prog)>0?esc(c.pct_cumplimiento)+'% cumplido':'Sin actividades por incidencia')+(c.tardio_cierre?' (cerró tarde)':'')+'</div>';
   else est='<div class="estado '+(s.estado_tiempo==='abierta'?'':'aviso')+'">'+(s.estado_tiempo==='abierta'?'Programada':'Sin cerrar a tiempo')+' · entregada '+(c.tardio_programado?'tarde':'a tiempo')+'</div>';
   var rs=(s.renglones||[]).map(function(r){
     var dias=DIAS.map(function(l){
@@ -85,7 +95,7 @@ function tarjeta(p){
     return '<div class="ren"><div><b>'+esc(r.actividad_nombre)+(r.detalle?' · '+esc(r.detalle):'')+'</b><small>'+esc([r.lugar_general,r.lugar_especifico].filter(Boolean).join(' — '))+' · '+esc(r.hora_ini)+'–'+esc(r.hora_fin)+'</small>'+
       (r.editado_post_envio?'<div class="cambio">Modificado después de enviar'+(r.ultimo_cambio_ts?' ('+esc(r.ultimo_cambio_ts)+')':'')+'</div>':'')+'</div><div class="dias">'+dias+'</div></div>';
   }).join('');
-  return '<div class="card"><h2>'+esc(p.nombre)+'</h2>'+est+(rs||'')+'</div>';
+  return '<div class="card"><h2>'+esc(p.nombre)+'</h2>'+est+incidenciasHtml(s)+(rs||'')+'</div>';
 }
 function arrancar(){if(!TOKEN){el('cuerpo').innerHTML='<p class="vacio">Enlace incompleto. Pida el enlace a coordinación.</p>';return;}cargar('');}
 if(typeof google!=='undefined'&&google.script&&google.script.url){google.script.url.getLocation(function(loc){TOKEN=(loc.parameter&&loc.parameter.j)||'';arrancar();});}

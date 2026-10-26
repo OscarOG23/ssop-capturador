@@ -350,9 +350,9 @@ tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--gxl)}
 
 /* ===== Panel analítico (pestañas Análisis / Cierre) ===== */
-.admin-tabs{display:flex;gap:2px;border-bottom:2px solid var(--bd);margin:0 0 16px}
+.admin-tabs{display:flex;gap:2px;border-bottom:2px solid var(--bd);margin:0 0 16px;overflow-x:auto}
 .admin-tab{
-  flex:1;padding:11px 8px;min-height:var(--tap);
+  flex:1 0 auto;white-space:nowrap;padding:11px 8px;min-height:var(--tap);
   background:none;border:none;border-bottom:3px solid transparent;
   font-family:inherit;font-size:13px;font-weight:600;color:var(--mu);cursor:pointer;
   transition:color var(--tf) var(--eo),border-color var(--tf) var(--eo);
@@ -416,6 +416,50 @@ tr:hover td{background:var(--gxl)}
   .hdr{height:52px}
 
   .admin-stat strong{font-size:18px}
+/* ===== Supervisión (Mi cronograma, fase 3) =====
+   La severidad va en color + forma del ícono (triángulo alta, círculo media,
+   cuadro baja) + texto: nunca solo en el color. Mismos pares que .sev-*
+   (≥ 4.5:1). En móvil la tabla de la ficha se apila en tarjetas. */
+.sup-aviso{margin:0 0 14px;padding:12px 14px;border-left:3px solid var(--o);background:var(--op);
+  color:var(--ink2);border-radius:0 var(--r1) var(--r1) 0;font-size:13px;line-height:1.55}
+.sup-aviso strong{color:var(--o-tx)}
+.sup-hint{font-size:13px;color:var(--ink2);margin:0 0 12px;line-height:1.55}
+.sup-leyenda{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.sup-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sup-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;
+  padding:4px 10px;border-radius:var(--rf);line-height:1.35}
+.sup-chip svg,.sev svg,.sup-resaltar svg{flex-shrink:0;vertical-align:-2px}
+.sup-chip.alta{background:var(--ro-bg);color:var(--ro)}
+.sup-chip.media{background:var(--am-bg);color:var(--am)}
+.sup-chip.baja{background:var(--bd2);color:var(--sev-tx)}
+.sup-fila{align-items:flex-start}
+.sup-puntaje{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;
+  min-width:56px;min-height:var(--tap);padding:4px 8px;border-radius:var(--r2);background:var(--gxl);color:var(--gd)}
+.sup-puntaje b{font-size:20px;font-weight:800;line-height:1}
+.sup-puntaje small{font-size:11px;font-weight:600}
+.sup-ficha h3:focus{outline:2px solid var(--g);outline-offset:2px}
+.sup-ficha h4{font-size:14px;font-weight:800;color:var(--gd);margin:18px 0 8px}
+.sup-indicio{border:1px solid var(--bd);border-left:4px solid var(--sev-tx);border-radius:var(--r2);
+  padding:10px 12px;margin:8px 0;background:var(--wh);font-size:13px;color:var(--ink2);line-height:1.55}
+.sup-indicio.alta{border-left-color:var(--ro)}
+.sup-indicio.media{border-left-color:var(--am)}
+.sup-indicio-tit{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:4px;color:var(--ink)}
+.sup-nota{font-size:12px;color:var(--mu);margin-top:4px;font-style:italic}
+.sup-ul{margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--ink2)}
+.sup-ul li{margin-bottom:6px}
+.sup-tabla td{text-align:left}
+.sup-tabla td.sup-resaltar{background:var(--am-bg);color:var(--am);font-weight:700}
+.btn-ctl[aria-pressed="true"]{background:var(--gxl);color:var(--gd);border:1px solid var(--g)}
+@media(max-width:600px){
+  .sup-tabla thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .sup-tabla tr{display:block;padding:10px 12px;border-bottom:1px solid var(--bd2)}
+  .sup-tabla tr:last-child{border-bottom:none}
+  .sup-tabla td{display:flex;justify-content:space-between;gap:12px;padding:4px 0;border:none;text-align:right}
+  .sup-tabla td:first-child{padding-left:0}
+  .sup-tabla td::before{content:attr(data-label);font-weight:700;color:var(--gd);text-align:left;flex-shrink:0}
+  .sup-tabla tr:hover td{background:none}
+  .sup-tabla td.sup-resaltar{background:var(--am-bg)}
+}
 </style>
 </head>
 <body>
@@ -465,6 +509,7 @@ tr:hover td{background:var(--gxl)}
       <button type="button" class="admin-tab" role="tab" data-tab="cierre" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('cierre')">Cierre y env&iacute;o</button>
       <button type="button" class="admin-tab" role="tab" data-tab="historico" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('historico')">Hist&oacute;rico</button>
       <button type="button" class="admin-tab" role="tab" data-tab="cronogramas" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('cronogramas')">Cronogramas</button>
+      <button type="button" class="admin-tab" role="tab" data-tab="supervision" aria-selected="false" tabindex="-1" onclick="cambiarTabAdmin('supervision')">Supervisi&oacute;n</button>
     </div>
 
     <div id="tabRecepcion" class="admin-tab-panel">
@@ -529,6 +574,7 @@ tr:hover td{background:var(--gxl)}
     <div id="tabCierre" class="admin-tab-panel oculto"></div>
     <div id="tabHistorico" class="admin-tab-panel oculto"></div>
     <div id="tabCronogramas" class="admin-tab-panel oculto"></div>
+    <div id="tabSupervision" class="admin-tab-panel oculto"></div>
   </div>
 </div>
 
@@ -698,6 +744,112 @@ function avisosEstimacion(est){
   });
   return out;
 }
+
+/* ── Calendario institucional (Mi cronograma, fase 2) ── */
+var TIPOS_CAL_CR={inhabil:'Inhábil',suspension:'Suspensión de labores',vacaciones:'Vacaciones'};
+var ORIGEN_INC_CR={semana:'desde Mi semana',hoy:'desde Hoy',no_realizado:'desde «No se pudo hacer»'};
+var MESES_CAL_CR=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function fechaCalCr(f){var p=String(f).split('-');return (+p[2])+' '+MESES_CAL_CR[p[1]-1]+' '+p[0];}
+function textoPeriodoCalCr(c){var d=String(c.desde),h=String(c.hasta||c.desde);return h!==d?fechaCalCr(d)+' al '+fechaCalCr(h):fechaCalCr(d);}
+function etiquetaAlcanceCalCr(c){return c.alcance==='rol'?'Rol '+c.rol_id:'Todos';}
+/* Solo los renglones que no se han dado de baja, por fecha. */
+function calendarioVigenteCr(lista){
+  return (lista||[]).filter(function(c){return c.activo===true||String(c.activo).toUpperCase()==='TRUE';})
+    .sort(function(a,b){return a.desde<b.desde?-1:a.desde>b.desde?1:0;});
+}
+/* Primer error del formulario (mismos mensajes que el servidor) o null. */
+function errorFormCalCr(f){
+  var fecha=/^\d{4}-\d\d-\d\d$/;
+  if(!TIPOS_CAL_CR[f.tipo])return {campo:'tipo',error:'Elige el tipo: inhábil, suspensión o vacaciones.'};
+  if(!String(f.nombre||'').trim())return {campo:'nombre',error:'Escribe el nombre (por ejemplo, el del oficio).'};
+  if(!fecha.test(String(f.desde||'')))return {campo:'desde',error:'Elige la fecha de inicio.'};
+  var hasta=f.hasta||f.desde;
+  if(!fecha.test(hasta)||hasta<f.desde)return {campo:'hasta',error:'La fecha final no puede ser antes de la inicial.'};
+  if(f.alcance==='rol'){
+    if(!String(f.rol_id||'').trim())return {campo:'rol_id',error:'Elige el rol (por ejemplo, A).'};
+    if(f.tipo!=='vacaciones')return {campo:'tipo',error:'Los roles solo son de vacaciones.'};
+  }
+  return null;
+}
+/* Cuántos eligieron cada rol y cuántos faltan. */
+function resumenRolesCr(elecciones){
+  var por={},sin=0;
+  (elecciones||[]).forEach(function(e){if(e.rol_id)por[e.rol_id]=(por[e.rol_id]||0)+1;else sin++;});
+  return {roles:Object.keys(por).sort().map(function(k){return {rol_id:k,n:por[k]};}),sin_elegir:sin};
+}
+/* ===== Supervisión (Mi cronograma, fase 3) =====
+   Solo presentación: el servidor (crono_supervision) decide los indicios, su
+   severidad y su explicación; aquí se cuentan, se filtran y se exportan. */
+var SEV_TEXTO_SUP={alta:'Alta',media:'Media',baja:'Baja',informativa:'Informativa'};
+
+/* {alta,media,baja} de una lista de chips o de indicios ({severidad}). */
+function conteoSevSup(xs){
+  var n={alta:0,media:0,baja:0};
+  (xs||[]).forEach(function(x){if(x&&n[x.severidad]!==undefined)n[x.severidad]++;});
+  return n;
+}
+
+/* Texto que acompaña al puntaje: la severidad nunca va solo en el color. */
+function resumenSeveridadSup(xs){
+  var n=conteoSevSup(xs),p=[];
+  if(n.alta)p.push(n.alta+(n.alta===1?' alta':' altas'));
+  if(n.media)p.push(n.media+(n.media===1?' media':' medias'));
+  if(n.baja)p.push(n.baja+(n.baja===1?' baja':' bajas'));
+  return p.length?p.join(' · '):'Sin indicios';
+}
+
+/* «Con indicios» (por omisión) o «Todos»; se respeta el orden del servidor. */
+function filtrarListaSup(lista,todos){
+  return (lista||[]).filter(function(f){return todos||f.puntaje>0;});
+}
+
+/* Una celda CSV. Un texto que empieza con = + - @ Excel lo abre como fórmula:
+   se le antepone ' (salvo que sea un número). Comillas si trae , " ; o salto. */
+function celdaCsvSup(v){
+  if(v===null||v===undefined)return '';
+  var s=String(v);
+  if(/^[=+\-@\t\r]/.test(s)&&!/^-?\d+(\.\d+)?$/.test(s))s="'"+s;
+  return /[",;\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+}
+
+/* BOM para que Excel lea los acentos; renglones con CRLF. */
+function csvSup(filas){
+  return '﻿'+(filas||[]).map(function(f){return (f||[]).map(celdaCsvSup).join(',');}).join('\r\n')+'\r\n';
+}
+
+function filasCsvListaSup(r){
+  var out=[['Orden','Clave','Nombre','Unidad','Puntaje','Altas','Medias','Bajas','Indicios',
+            'Alertas del cronograma','Señales del reporte','Usó el cronograma','Reporte del mes']];
+  ((r&&r.lista)||[]).forEach(function(f,i){
+    var n=conteoSevSup(f.chips);
+    out.push([i+1,f.promotor_clave,f.promotor_nombre,f.unidad,f.puntaje,n.alta,n.media,n.baja,
+      (f.chips||[]).map(function(c){return c.titulo+' ('+(SEV_TEXTO_SUP[c.severidad]||c.severidad)+')';}).join('; '),
+      f.n_alertas,f.n_senales,f.uso_crono?'Sí':'No',f.sin_reporte?'Sin reporte':'Entregado']);
+  });
+  out.push([]);
+  out.push([(r&&r.leyenda)||'']);
+  return out;
+}
+
+/* Los renglones de «Datos del mes» (f.filas), las etiquetas y las explicaciones los redacta el servidor. */
+function filasCsvFichaSup(f,periodoEtq){
+  var out=[['Ficha de supervisión',f.promotor_nombre],['Clave',f.promotor_clave],['Unidad',f.unidad],
+           ['Mes',periodoEtq],['Puntaje',f.puntaje+' ('+resumenSeveridadSup(f.indicios)+')'],[],
+           ['Concepto','Valor','Referencia']];
+  (f.filas||[]).forEach(function(d){out.push([d.concepto,d.valor,d.referencia]);});
+  out.push([]);out.push(['Indicio','Severidad','Explicación']);
+  (f.indicios||[]).forEach(function(x){out.push([x.titulo,SEV_TEXTO_SUP[x.severidad]||x.severidad,x.explicacion]);});
+  out.push([]);out.push(['Alertas abiertas del cronograma','Severidad','Detalle']);
+  (f.alertas||[]).forEach(function(a){out.push([a.etiqueta||a.regla,SEV_TEXTO_SUP[a.severidad]||a.severidad,a.detalle]);});
+  out.push([]);out.push(['Señales del reporte (S1–S5)','Severidad','Detalle']);
+  (f.senales||[]).forEach(function(s){out.push([s.etiqueta||s.regla,SEV_TEXTO_SUP[s.severidad]||s.severidad,s.detalle]);});
+  out.push([]);out.push([f.leyenda]);
+  return out;
+}
+
+function nombreArchivoSup(tipo,periodo,clave){
+  return 'supervision-'+tipo+'-'+periodo+(clave?'-'+String(clave).replace(/[^\w-]/g,''):'')+'.csv';
+}
 /*</admin-puro>*/
 
 // ===== SVG ICONS (reutilizables en JS) =====
@@ -720,7 +872,7 @@ document.addEventListener('DOMContentLoaded',function(){
 document.addEventListener('keydown',function(e){
   if(document.activeElement&&document.activeElement.classList&&
      document.activeElement.classList.contains('admin-tab'))
-    navTabs(e,['recepcion','analisis','cierre','historico'].map(idTabAdmin),
+    navTabs(e,['recepcion','analisis','cierre','historico','cronogramas','supervision'].map(idTabAdmin),
             function(b){cambiarTabAdmin(b.getAttribute('data-tab'));});
 });
 
@@ -805,13 +957,13 @@ var HIST=[];
 var ICO_PRINT='<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
 
 
-function callBackend(payload){
+function callBackend(payload,ms){
   return new Promise(function(resolve,reject){
     var listo=false;
     var to=setTimeout(function(){
       if(listo)return;listo=true;
       reject(new Error('Tiempo de espera agotado'));
-    },15000);
+    },ms||15000);
     function ok(r){if(listo)return;listo=true;clearTimeout(to);resolve(r);}
     function fail(e){if(listo)return;listo=true;clearTimeout(to);reject(e);}
     if(typeof google!=='undefined'&&google.script&&google.script.run){
@@ -1000,6 +1152,9 @@ function cargarAdmin(){
     if(_recPeriodo!==periodo){_recEnviados={};_recPeriodo=periodo;}
     ADM=r;
     renderAdminDash(r);
+    // Supervisión es por mes: al cambiar el periodo se recalcula si está a la vista.
+    SUP=null;
+    if(!el('tabSupervision').classList.contains('oculto'))cargarSupervision();
     cargarAlertas();
     // La analítica trae las metas locales: sin ella la tabla de Recepción se
     // pinta sin semáforo (a propósito — el cliente ya no inventa metas).
@@ -1079,7 +1234,7 @@ var METAS_LOCALES={};         // {IND: meta_local} — única fuente de metas en
 
 
 function cambiarTabAdmin(tab){
-  ['recepcion','analisis','cierre','historico','cronogramas'].forEach(function(t){
+  ['recepcion','analisis','cierre','historico','cronogramas','supervision'].forEach(function(t){
     var btn=document.querySelector('.admin-tab[data-tab="'+t+'"]');
     if(btn){
       var act=(t===tab);
@@ -1094,11 +1249,12 @@ function cambiarTabAdmin(tab){
   if(tab==='cierre'){ANL?renderCierre():cargarAnalitica();}
   if(tab==='historico'){HIST?renderHistorico():cargarHistorico();}
   if(tab==='cronogramas'){CR_TAB?renderCronogramas():cargarCronogramas();}
+  if(tab==='supervision'){(SUP&&SUP.periodo===periodoSup())?renderSupervision():cargarSupervision();}
 }
 
 // ===== Pestaña Cronogramas (supervisión semanal) =====
 var CR_SEM='',CR_TAB=null;
-var ETQ_PROG={a_tiempo:'A tiempo',tardio:'Tardío',sin_entregar:'Sin entregar'};
+var ETQ_PROG={a_tiempo:'A tiempo',tardio:'Tardío',sin_entregar:'Sin entregar',cubierta:'Cubierta'};
 var ETQ_CIERRE={cerrada:'Cerrada',abierta:'Abierta',vencida:'Vencida'};
 var ICO_NIVEL={verde:'🟢',amarillo:'🟡',blanco:'⚪'};
 var DIAS_A=['L','M','X','J','V','S'];
@@ -1124,13 +1280,15 @@ function renderCronogramas(){
   var resumen='<p class="hint">'+ent+' de '+r.filas.length+' entregaron su cronograma · último cierre automático: '+esc(r.ultimo_cierre||'nunca')+'</p>';
   var acciones='<div class="admin-ctl"><button type="button" class="btn-ctl accion" onclick="cargarVerifCr()">Verificación al azar</button>'+
     '<button type="button" class="btn-ctl reload" onclick="cargarJefesCr()">Jefes inmediatos</button>'+
+    '<button type="button" class="btn-ctl reload" onclick="cargarCalendarioCr()">Calendario</button>'+
     '<button type="button" class="btn-ctl reload" onclick="cierreManualCr()">Correr cierre semanal</button></div>';
-  var tabla='<div class="admin-tbl-wrap"><table><thead><tr><th>Promotor</th><th>Programado</th><th>Cierre</th><th>Cumpl.</th><th>🟢 / 🟡 / ⚪</th><th>Alertas</th><th></th></tr></thead><tbody>'+
+  var tabla='<div class="admin-tbl-wrap"><table><thead><tr><th>Promotor</th><th>Programado</th><th>Cierre</th><th>Cumpl.</th><th>🟢 / 🟡 / ⚪</th><th>Alertas</th><th>Incidencias</th><th></th></tr></thead><tbody>'+
     r.filas.map(function(f){return '<tr><td>'+esc(f.nombre)+'<div class="anl-unidad">'+esc(f.unidad)+'</div></td>'+
       '<td>'+esc(ETQ_PROG[f.programado]||'')+'</td><td>'+esc(ETQ_CIERRE[f.cierre]||'—')+(f.tardio_cierre?' (tarde)':'')+'</td>'+
-      '<td>'+(f.n_prog?esc(f.pct)+'%':'—')+'</td><td>'+esc(f.n_verde)+' / '+esc(f.n_amarillo)+' / '+esc(f.n_blanco)+'</td>'+
-      '<td>'+esc(f.alertas||'')+'</td><td><button type="button" class="btn-ctl btn-mini accion" data-c="'+escA(f.clave)+'" onclick="abrirDetalleCr(this.dataset.c)">Ver</button></td></tr>';}).join('')+'</tbody></table></div>';
-  el('tabCronogramas').innerHTML=sel+resumen+acciones+'<div id="crExtra"></div>'+tabla;
+      '<td>'+(f.sin_base?'Sin actividades por incidencia':(f.n_prog?esc(f.pct)+'%':'—'))+'</td><td>'+esc(f.n_verde)+' / '+esc(f.n_amarillo)+' / '+esc(f.n_blanco)+'</td>'+
+      '<td>'+esc(f.alertas||'')+'</td><td>'+esc((f.incidencias||[]).join('; ')||'—')+'</td><td><button type="button" class="btn-ctl btn-mini accion" data-c="'+escA(f.clave)+'" onclick="abrirDetalleCr(this.dataset.c)">Ver</button></td></tr>';}).join('')+'</tbody></table></div>';
+  var avisoPuesto=(r.sin_puesto&&r.sin_puesto.length)?'<div class="cf-aviso" role="note">Sin puesto en el catálogo: no tienen días económicos ni pases hasta corregir CAT_PROMOTORES. '+esc(r.sin_puesto.join(', '))+'.</div>':'';
+  el('tabCronogramas').innerHTML=sel+resumen+avisoPuesto+acciones+'<div id="crExtra"></div>'+tabla;
 }
 
 function abrirDetalleCr(clave){
@@ -1160,15 +1318,19 @@ function htmlDiaCr(d,r,l){
 function htmlDetalleCr(d,serie){
   var s=d.semana,c=s.cabecera,h='<p class="hint">'+esc(d.identidad.unidad)+' · semana del '+esc(s.semana_id)+'</p>';
   if(!c)h+='<p class="anl-vacio">No entregó cronograma esta semana.</p>';
-  else h+='<p><b>'+esc(c.estatus==='cerrada'?'Cerrada':(s.estado_tiempo==='abierta'?'Abierta':'Vencida'))+'</b> · entregado '+esc(c.ts_programado)+(c.tardio_programado?' (tarde)':'')+' · '+esc(c.pct_cumplimiento)+'% cumplido</p>';
+  else h+='<p><b>'+esc(c.estatus==='cerrada'?'Cerrada':(s.estado_tiempo==='abierta'?'Abierta':'Vencida'))+'</b> · entregado '+esc(c.ts_programado)+(c.tardio_programado?' (tarde)':'')+' · '+(Number(c.n_prog)>0?esc(c.pct_cumplimiento)+'% cumplido':'Sin actividades por incidencia')+'</p>';
   h+=s.renglones.map(function(r){
     var dias=DIAS_A.filter(function(l){return r.dias_prog.indexOf(l)!==-1;}).map(function(l){return htmlDiaCr(d,r,l);}).join('');
     var cambios=(r.log_cambios||[]).map(function(x){return '<li>'+esc(x.ts)+' · '+esc(x.campo)+': '+esc(x.antes)+' → '+esc(x.despues)+'</li>';}).join('');
     return '<div class="anl-det"><b>'+esc(r.actividad_nombre)+(r.detalle?' · '+esc(r.detalle):'')+'</b><div class="anl-unidad">'+esc([r.lugar_general,r.lugar_especifico].filter(Boolean).join(' — '))+' · '+esc(r.hora_ini)+'–'+esc(r.hora_fin)+(r.origen!=='nuevo'?' · '+esc(r.origen):'')+'</div><ul>'+dias+'</ul>'+(cambios?'<details><summary>Cambios después de enviar</summary><ul>'+cambios+'</ul></details>':'')+'</div>';
   }).join('');
+  if((d.incidencias||[]).length)h+='<h4>Incidencias de la semana</h4><ul>'+d.incidencias.map(function(i){
+    return '<li><b>'+esc(i.texto)+'</b>'+(i.detalle?' · '+esc(i.detalle):'')+' · declarada '+esc(String(i.ts_declarado).substring(0,16))+' ('+esc(ORIGEN_INC_CR[i.origen]||i.origen)+')'+
+      (i.foto_url?' · <a href="'+escA(i.foto_url)+'" target="_blank" rel="noopener">comprobante</a>':'')+'</li>';}).join('')+'</ul>';
+  if((d.bloqueos||[]).length)h+='<p class="hint">Calendario esa semana: '+esc(d.bloqueos.map(function(b){return fechaCalCr(b.fecha)+' · '+(TIPOS_CAL_CR[b.tipo]||b.tipo)+' · '+b.nombre;}).join('; '))+'.</p>';
   if(d.lugares.length)h+='<h4>Lugares aprendidos</h4><ul>'+d.lugares.map(function(l){var conRef=l.lat_ref!=='';return '<li>'+esc(l.lugar_texto)+' · '+(conRef?'con referencia':'sin referencia')+' · '+esc(l.n_usos)+' usos'+(conRef?' <button type="button" class="btn-ctl btn-mini reload" data-c="'+escA(d.identidad.promotor_clave)+'" data-l="'+escA(l.lugar_clave)+'" onclick="reiniciarLugarCr(this)">Reiniciar</button>':'')+'</li>';}).join('')+'</ul>';
   if(d.alertas.length)h+='<h4>Alertas</h4><ul>'+d.alertas.map(function(a){return '<li>['+esc(a.severidad)+'] '+esc(a.detalle)+' ('+esc(a.estatus)+')</li>';}).join('')+'</ul>';
-  if(serie.length)h+='<h4>Últimas 8 semanas</h4><ul>'+serie.map(function(x){return '<li>'+esc(x.semana_id)+': '+(x.estatus==='sin_entregar'?'sin entregar':esc(x.pct)+'% · '+esc(x.n_verde)+' 🟢 de '+esc(x.n_real)+' realizadas')+'</li>';}).join('')+'</ul>';
+  if(serie.length)h+='<h4>Últimas 8 semanas</h4><ul>'+serie.map(function(x){return '<li>'+esc(x.semana_id)+': '+(x.estatus==='sin_entregar'?'sin entregar':(x.sin_base?'sin actividades por incidencia':esc(x.pct)+'% · '+esc(x.n_verde)+' 🟢 de '+esc(x.n_real)+' realizadas'))+'</li>';}).join('')+'</ul>';
   return h;
 }
 
@@ -1209,6 +1371,246 @@ function cargarJefesCr(){
 function copiarEnlaceCr(u){var p=navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject();p.then(function(){toast('Enlace copiado.');}).catch(function(){confirmar({titulo:'Copia el enlace',ok:'Listo',cancelar:'Cerrar',cuerpo:'<input type="text" readonly value="'+escA(u)+'" style="width:100%" onfocus="this.select()">'});});}
 function regenerarJefeCr(btn){var clues=btn.dataset.c,unidad=btn.dataset.n;confirmar({titulo:'¿Generar un enlace nuevo?',cuerpo:'El enlace anterior de '+esc(unidad)+' dejará de funcionar.',ok:'Generar',peligro:true}).then(function(ok){if(!ok)return;callBackend({action:'crono_jefe_token_regenerar',clues:clues,unidad:unidad,key:adminKey}).then(function(r){if(!r||!r.ok){toast((r&&r.error)||'Error.',true);return;}toast('Enlace nuevo generado.');cargarJefesCr();}).catch(function(){toast('Error de conexión.',true);});});}
 function cierreManualCr(){confirmar({titulo:'¿Correr el cierre semanal?',cuerpo:'Entrega las semanas completas, marca las vencidas, recalcula las alertas y envía los correos de esta semana si aún no se enviaron.',ok:'Correr'}).then(function(ok){if(!ok)return;setSyncStatus('spin','Ejecutando…');callBackend({action:'crono_cierre_manual',key:adminKey}).then(function(r){setSyncStatus('ok','En línea');if(!r||!r.ok){toast((r&&r.error)||'Error.',true);return;}toast((r.entregadas||0)+' entregadas solas · '+r.vencidas+' vencidas · '+r.alertas_nuevas+' alertas nuevas · '+r.correos.enviados+' correos.');cargarCronogramas();}).catch(function(){setSyncStatus('ok','En línea');toast('Sigue ejecutándose en el servidor. Recarga la pestaña en un minuto.');});});}
+
+// ---- Sección Calendario de Cronogramas (Mi cronograma, fase 2) ----
+var CAL=null,CAL_FORM=null;
+function cargarCalendarioCr(){
+  var box=el('crExtra');box.innerHTML='<p class="anl-vacio">Cargando…</p>';
+  callBackend({action:'crono_calendario',key:adminKey}).then(function(r){
+    if(!r||!r.ok){box.innerHTML='<p class="anl-vacio">'+esc((r&&r.error)||'Error.')+'</p>';return;}
+    CAL=r;CAL_FORM=null;renderCalendarioCr();
+  }).catch(function(){box.innerHTML='<p class="anl-vacio">Error de conexión.</p>';});
+}
+function textoRolCr(r){return 'Rol '+r.rol_id+' ('+r.periodos.map(textoPeriodoCalCr).join(' y ')+')';}
+function htmlFormCalCr(){
+  var f=CAL_FORM,e=f.errores||{};
+  function err(k){return '<div id="calErr_'+k+'" class="msg-error'+(e[k]?'':' oculto')+'" role="alert">'+esc(e[k]||'')+'</div>';}
+  return '<div class="anl-det"><h4>'+(CAL.calendario.some(function(c){return c.cal_id===f.cal_id;})?'Editar renglón del calendario':'Nuevo renglón del calendario')+'</h4>'+
+    '<label for="calTipo">Tipo</label><select id="calTipo" onchange="cambioFormCalCr()">'+Object.keys(TIPOS_CAL_CR).map(function(k){
+      return '<option value="'+k+'"'+(f.tipo===k?' selected':'')+'>'+esc(TIPOS_CAL_CR[k])+'</option>';}).join('')+'</select>'+err('tipo')+
+    '<label for="calNombre">Nombre (por ejemplo, el del oficio)</label><input type="text" id="calNombre" maxlength="80" autocomplete="off" value="'+escA(f.nombre)+'" oninput="cambioFormCalCr(true)">'+err('nombre')+
+    '<label for="calDesde">Desde</label><input type="date" id="calDesde" value="'+escA(f.desde)+'" onchange="cambioFormCalCr()">'+err('desde')+
+    '<label for="calHasta">Hasta (vacío = un solo día)</label><input type="date" id="calHasta" value="'+escA(f.hasta)+'" onchange="cambioFormCalCr()">'+err('hasta')+
+    '<label for="calAlcance">A quién aplica</label><select id="calAlcance" onchange="cambioFormCalCr()"><option value="todos"'+(f.alcance==='todos'?' selected':'')+'>Todos</option>'+
+      '<option value="rol"'+(f.alcance==='rol'?' selected':'')+'>Un rol de vacaciones</option></select>'+
+    (f.alcance==='rol'?'<label for="calRol">Rol</label><input type="text" id="calRol" maxlength="20" autocomplete="off" value="'+escA(f.rol_id)+'" oninput="cambioFormCalCr(true)">'+err('rol_id'):'')+
+    '<div class="admin-ctl" style="margin-top:14px"><button type="button" class="btn-ctl accion" onclick="guardarCalCr(this)">Guardar</button>'+
+    '<button type="button" class="btn-ctl reload" onclick="CAL_FORM=null;renderCalendarioCr()">Cancelar</button></div></div>';
+}
+function renderCalendarioCr(){
+  var r=CAL,box=el('crExtra');if(!r)return;
+  var vig=calendarioVigenteCr(r.calendario),h='<h4>Calendario institucional</h4>'+
+    '<p class="hint">Inhábiles, suspensiones y vacaciones: esos días no se programan, no cuentan en el cumplimiento y a nadie se le pide explicarlos. Se cargan con el oficio de la institución. '+
+    'Días económicos que se pueden declarar al año: <b>'+esc(r.limite_economicos)+'</b> (propiedad CRONO_ECONOMICOS_ANIO). El conteo oficial es el de RH.</p>';
+  if(r.sin_puesto.length)h+='<div class="cf-aviso" role="note">Sin puesto en el catálogo: no tienen días económicos ni pases hasta corregir CAT_PROMOTORES. '+esc(r.sin_puesto.map(function(p){return p.promotor_nombre;}).join(', '))+'.</div>';
+  h+=vig.length?'<div class="admin-tbl-wrap"><table><thead><tr><th>Tipo</th><th>Nombre</th><th>Fechas</th><th>Aplica a</th><th></th></tr></thead><tbody>'+vig.map(function(c){
+    return '<tr><td>'+esc(TIPOS_CAL_CR[c.tipo]||c.tipo)+'</td><td>'+esc(c.nombre)+'</td><td>'+esc(textoPeriodoCalCr(c))+'</td><td>'+esc(etiquetaAlcanceCalCr(c))+'</td>'+
+      '<td><button type="button" class="btn-ctl accion" data-id="'+escA(c.cal_id)+'" onclick="editarCalCr(this.dataset.id)">Editar</button> '+
+      '<button type="button" class="btn-ctl cerrar" data-id="'+escA(c.cal_id)+'" onclick="quitarCalCr(this.dataset.id)">Quitar</button></td></tr>';}).join('')+'</tbody></table></div>'
+    :'<p class="anl-vacio">El calendario está vacío.</p>';
+  h+=CAL_FORM?htmlFormCalCr():'<div class="admin-ctl" style="margin-top:12px"><button type="button" class="btn-ctl accion" onclick="nuevoCalCr()">Agregar al calendario</button></div>';
+  h+=htmlRolesCr(r);
+  box.innerHTML=h;
+}
+function nuevoCalCr(){
+  CAL_FORM={cal_id:'CAL-'+uuid().substring(0,8),tipo:'inhabil',nombre:'',desde:'',hasta:'',alcance:'todos',rol_id:'',errores:{}};
+  renderCalendarioCr();el('calNombre').focus();
+}
+function editarCalCr(id){
+  var c=CAL.calendario.filter(function(x){return x.cal_id===id;})[0];if(!c)return;
+  CAL_FORM={cal_id:c.cal_id,tipo:c.tipo,nombre:c.nombre,desde:c.desde,hasta:c.hasta===c.desde?'':c.hasta,alcance:c.alcance,rol_id:c.rol_id,errores:{}};
+  renderCalendarioCr();el('calNombre').focus();
+}
+/* Lee el formulario. Al escribir (soloLeer) no se redibuja para no perder el foco; al cambiar un selector o una fecha sí. */
+function cambioFormCalCr(soloLeer){
+  var f=CAL_FORM;
+  f.tipo=elv('calTipo')||f.tipo;f.nombre=elv('calNombre');f.desde=elv('calDesde');f.hasta=elv('calHasta');
+  f.alcance=elv('calAlcance')||f.alcance;if(el('calRol'))f.rol_id=elv('calRol');
+  if(!soloLeer){f.errores={};renderCalendarioCr();}
+}
+function guardarCalCr(btn){
+  cambioFormCalCr(true);
+  var f=CAL_FORM,m=errorFormCalCr(f);
+  if(m){
+    f.errores={};f.errores[m.campo]=m.error;renderCalendarioCr();
+    var c=el({tipo:'calTipo',nombre:'calNombre',desde:'calDesde',hasta:'calHasta',rol_id:'calRol'}[m.campo]);if(c)c.focus();return;
+  }
+  var libre=ocupado(btn,'Guardando…');
+  callBackend({action:'crono_calendario_guardar',key:adminKey,cal_id:f.cal_id,tipo:f.tipo,nombre:f.nombre,desde:f.desde,hasta:f.hasta||f.desde,alcance:f.alcance,rol_id:f.rol_id}).then(function(r){
+    libre();
+    if(!r||!r.ok){f.errores={nombre:(r&&r.error)||'No se pudo guardar.'};renderCalendarioCr();return;}
+    toast('Calendario guardado.');cargarCalendarioCr();
+  }).catch(function(){libre();toast('Error de conexión.',true);});
+}
+function quitarCalCr(id){
+  var c=CAL.calendario.filter(function(x){return x.cal_id===id;})[0];if(!c)return;
+  confirmar({titulo:'¿Quitar del calendario?',cuerpo:esc(c.nombre)+' · '+esc(textoPeriodoCalCr(c))+'. Esos días vuelven a contar en el cumplimiento.',ok:'Quitar',peligro:true}).then(function(ok){
+    if(!ok)return;
+    callBackend({action:'crono_calendario_borrar',key:adminKey,cal_id:id}).then(function(r){
+      if(!r||!r.ok){toast((r&&r.error)||'Error.',true);return;}
+      toast('Quitado del calendario.');cargarCalendarioCr();
+    }).catch(function(){toast('Error de conexión.',true);});
+  });
+}
+function htmlRolesCr(r){
+  if(!r.roles.length)return '<h4>Roles del primer periodo vacacional</h4><p class="hint">Aún no hay roles de '+esc(r.anio)+'. Agrega un renglón de vacaciones con alcance «Un rol de vacaciones» por cada periodo del oficio (por ejemplo, el Rol A del 20 al 31 de julio); a cada persona le aparece un aviso para elegir el suyo.</p>';
+  var res=resumenRolesCr(r.elecciones);
+  return '<h4>Roles del primer periodo vacacional · '+esc(r.anio)+'</h4><p class="hint">'+esc(r.roles.map(textoRolCr).join(' · '))+'</p>'+
+    '<p class="hint">'+esc(res.roles.map(function(x){return 'Rol '+x.rol_id+': '+x.n;}).concat(['Sin elegir: '+res.sin_elegir]).join(' · '))+'</p>'+
+    '<div class="admin-tbl-wrap"><table><thead><tr><th>Persona</th><th>Rol</th><th>Lo eligió</th><th>Corregir</th></tr></thead><tbody>'+r.elecciones.map(function(e){
+      var opts='<option value="">Sin rol</option>'+r.roles.map(function(x){return '<option value="'+escA(x.rol_id)+'"'+(x.rol_id===e.rol_id?' selected':'')+'>Rol '+esc(x.rol_id)+'</option>';}).join('');
+      return '<tr><td>'+esc(e.promotor_nombre)+'<div class="anl-unidad">'+esc(e.unidad)+'</div></td><td>'+esc(e.rol_id?'Rol '+e.rol_id:'Sin elegir')+'</td>'+
+        '<td>'+esc(e.por==='coordinacion'?'Coordinación':(e.por==='promotor'?'La persona':'—'))+'</td>'+
+        '<td><label class="sr-only" for="rol_'+escA(e.promotor_clave)+'">Rol de '+esc(e.promotor_nombre)+'</label><select id="rol_'+escA(e.promotor_clave)+'">'+opts+'</select> '+
+        '<button type="button" class="btn-ctl accion" data-c="'+escA(e.promotor_clave)+'" onclick="asignarRolCr(this)">Guardar</button></td></tr>';}).join('')+'</tbody></table></div>';
+}
+function asignarRolCr(btn){
+  var clave=btn.dataset.c,rol=elv('rol_'+clave),libre=ocupado(btn,'Guardando…');
+  callBackend({action:'crono_rol_asignar',key:adminKey,promotor_clave:clave,anio:CAL.anio,rol_id:rol}).then(function(r){
+    libre();
+    if(!r||!r.ok){toast((r&&r.error)||'Error.',true);return;}
+    toast(rol?'Rol corregido.':'Rol quitado.');cargarCalendarioCr();
+  }).catch(function(){libre();toast('Error de conexión.',true);});
+}
+
+// ===== Pestaña Supervisión (Mi cronograma, fase 3) =====
+// Solo pinta lo que entrega crono_supervision (la lista ya llega ordenada).
+var SUP=null,SUP_COMPLETA=false,SUP_FICHA='',SUP_PEDIDO='';
+var SVG_SUP='<svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">';
+var ICO_SEV_SUP={
+  alta:SVG_SUP+'<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  media:SVG_SUP+'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+  baja:SVG_SUP+'<rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="16" x2="12" y2="11"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+};
+var ICO_DESCARGA_SUP=SVG_SUP+'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+
+function periodoSup(){return el('adminPeriodo').value||PERIODO;}
+
+function cargarSupervision(){
+  var periodo=periodoSup();
+  if(SUP_PEDIDO===periodo)return;
+  SUP_PEDIDO=periodo;
+  el('tabSupervision').innerHTML='<p class="anl-vacio" role="status">Calculando indicios de '+esc(periodoLabel(periodo))+'…</p>';
+  setSyncStatus('spin','Calculando…');
+  function libre(){if(SUP_PEDIDO===periodo)SUP_PEDIDO='';}
+  callBackend({action:'crono_supervision',periodo:periodo,key:adminKey},45000).then(function(r){
+    libre();
+    if(periodo!==periodoSup()||(r&&r.ok&&r.periodo!==periodoSup()))return;
+    setSyncStatus('ok','En línea');
+    if(!r||!r.ok){el('tabSupervision').innerHTML='<p class="anl-vacio">'+esc((r&&r.error)||'Error.')+'</p>';return;}
+    SUP=r;renderSupervision();
+  }).catch(function(){
+    libre();
+    if(periodo!==periodoSup())return;
+    setSyncStatus('err','Error');el('tabSupervision').innerHTML='<p class="anl-vacio">Error de conexión.</p>';
+  });
+}
+
+/* Chip de un indicio: forma del ícono + texto + severidad para lector de pantalla. */
+function chipSup(c){
+  return '<span class="sup-chip '+esc(c.severidad)+'">'+(ICO_SEV_SUP[c.severidad]||'')+
+    '<span class="sr-only">Severidad '+esc(SEV_TEXTO_SUP[c.severidad]||c.severidad)+': </span>'+esc(c.titulo)+'</span>';
+}
+
+function filaSup(f,i){
+  var extra=f.nota?' · '+f.nota:'';
+  return '<button type="button" class="anl-fila sup-fila" data-c="'+escA(f.promotor_clave)+'" onclick="abrirFichaSup(this.dataset.c)">'+
+    '<div style="min-width:0;flex:1">'+
+      '<div class="anl-nombre">'+esc((i+1)+'. '+f.promotor_nombre)+'</div>'+
+      '<div class="anl-unidad">'+esc((f.unidad||'—')+' · '+resumenSeveridadSup(f.chips)+extra)+'</div>'+
+      (f.chips.length?'<div class="sup-chips">'+f.chips.map(chipSup).join('')+'</div>':'')+
+    '</div>'+
+    '<span class="sup-puntaje"><b>'+esc(f.puntaje)+'</b><small>puntos</small></span>'+
+  '</button>';
+}
+
+function renderSupervision(){
+  var r=SUP;if(!r)return;
+  SUP_FICHA='';
+  var conInd=filtrarListaSup(r.lista,false).length,lista=filtrarListaSup(r.lista,SUP_COMPLETA);
+  var tot=conteoSevSup([].concat.apply([],r.lista.map(function(f){return f.chips;})));
+  var h='<div class="sup-aviso" role="note">'+esc(r.aviso)+'</div>';
+  h+='<p class="sup-hint">Mes: <b>'+esc(periodoLabel(r.periodo))+'</b> (se cambia en «Período», arriba) · '+esc(r.nota_mes)+'</p>';
+  if(r.aviso_sin_puesto)h+='<div class="cf-aviso" role="note">'+esc(r.aviso_sin_puesto)+'</div>';
+  h+='<div class="admin-stats">'+
+    '<div class="admin-stat"><strong>'+conInd+'/'+r.lista.length+'</strong>Con indicios</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--ro)"><strong>'+tot.alta+'</strong>Altas</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--am)"><strong>'+tot.media+'</strong>Medias</div>'+
+    '<div class="admin-stat" style="border-left:3px solid var(--sev-tx)"><strong>'+tot.baja+'</strong>Bajas</div></div>';
+  h+='<div class="sup-leyenda" role="group" aria-label="Severidad y puntos">'+(r.severidades||[]).map(chipSup).join('')+'</div>';
+  h+='<div class="admin-ctl">'+
+    '<button type="button" class="btn-ctl reload" aria-pressed="'+(SUP_COMPLETA?'false':'true')+'" onclick="SUP_COMPLETA=false;renderSupervision()">Con indicios ('+conInd+')</button>'+
+    '<button type="button" class="btn-ctl reload" aria-pressed="'+(SUP_COMPLETA?'true':'false')+'" onclick="SUP_COMPLETA=true;renderSupervision()">Todos ('+r.lista.length+')</button>'+
+    '<button type="button" class="btn-ctl accion" onclick="exportarListaSup()">'+ICO_DESCARGA_SUP+' Exportar lista (CSV)</button>'+
+    '<button type="button" class="btn-ctl reload" onclick="cargarSupervision()">Recalcular</button></div>';
+  h+='<div id="supFicha"></div><h3 class="avance-tit" id="supTitLista">Revisar primero</h3>';
+  h+=lista.length
+    ?'<div role="list" aria-labelledby="supTitLista">'+lista.map(function(f,i){return '<div role="listitem">'+filaSup(f,i)+'</div>';}).join('')+'</div>'
+    :'<p class="anl-vacio">'+(r.lista.length?'Nadie tiene indicios este mes.':'Sin personal de campo activo.')+'</p>';
+  el('tabSupervision').innerHTML=h;
+}
+
+function listaReglasSup(xs,vacio){
+  if(!xs.length)return '<p class="anl-vacio">'+esc(vacio)+'</p>';
+  return '<ul class="sup-ul">'+xs.map(function(a){
+    return '<li><span class="sev sev-'+esc(a.severidad)+'">'+esc(SEV_TEXTO_SUP[a.severidad]||a.severidad)+'</span> <b>'+
+      esc(a.etiqueta||a.regla)+':</b> '+esc(a.detalle)+'</li>';
+  }).join('')+'</ul>';
+}
+
+function abrirFichaSup(clave){
+  var f=SUP&&SUP.fichas[clave];if(!f)return;
+  SUP_FICHA=clave;
+  var filas=(f.filas||[]).map(function(d){
+    return '<tr><td data-label="Concepto">'+esc(d.concepto)+'</td>'+
+      '<td data-label="Valor"'+(d.resaltar?' class="sup-resaltar"':'')+'>'+
+        (d.resaltar?ICO_SEV_SUP.media+'<span class="sr-only">Resaltado: </span> ':'')+esc(d.valor)+'</td>'+
+      '<td data-label="Referencia">'+esc(d.referencia||'—')+'</td></tr>';
+  }).join('');
+  var indicios=f.indicios.length?f.indicios.map(function(x){
+    return '<div class="sup-indicio '+esc(x.severidad)+'"><div class="sup-indicio-tit"><span class="sev sev-'+esc(x.severidad)+'">'+
+      (ICO_SEV_SUP[x.severidad]||'')+' '+esc(SEV_TEXTO_SUP[x.severidad]||x.severidad)+'</span><b>'+esc(x.titulo)+'</b></div>'+
+      '<div>'+esc(x.explicacion)+'</div><div class="sup-nota">'+esc(f.leyenda)+'</div></div>';
+  }).join(''):'<p class="anl-vacio">Sin indicios este mes.</p>';
+  el('supFicha').innerHTML='<section class="anl-det sup-ficha" aria-labelledby="supFichaTit">'+
+    '<h3 id="supFichaTit" tabindex="-1">'+esc(f.promotor_nombre)+'</h3>'+
+    '<p class="anl-unidad">'+esc((f.unidad||'—')+' · '+f.puesto_texto+' · '+periodoLabel(f.periodo)+
+      ' · puntaje '+f.puntaje+' ('+resumenSeveridadSup(f.indicios)+')')+'</p>'+
+    '<div class="sup-aviso" role="note">'+esc(f.aviso)+'</div>'+
+    '<h4>Indicios</h4>'+indicios+
+    '<h4>Datos del mes</h4><div class="admin-tbl-wrap"><table class="sup-tabla"><thead><tr><th>Concepto</th><th>Valor</th><th>Referencia</th></tr></thead><tbody>'+filas+'</tbody></table></div>'+
+    '<h4>Alertas abiertas del cronograma</h4>'+listaReglasSup(f.alertas,'Sin alertas abiertas.')+
+    '<h4>Señales del reporte mensual (S1–S5)</h4>'+listaReglasSup(f.senales,'Sin señales de dato no creíble.')+
+    '<div class="admin-ctl" style="margin-top:12px">'+
+      '<button type="button" class="btn-ctl accion" data-c="'+escA(f.promotor_clave)+'" onclick="exportarFichaSup(this.dataset.c)">'+ICO_DESCARGA_SUP+' Exportar ficha (CSV)</button>'+
+      '<button type="button" class="btn-ctl reload" onclick="cerrarFichaSup()">Cerrar ficha</button></div>'+
+  '</section>';
+  var t=el('supFichaTit');t.focus();t.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function cerrarFichaSup(){
+  var c=SUP_FICHA;SUP_FICHA='';el('supFicha').innerHTML='';
+  var b=document.querySelector('.sup-fila[data-c="'+(window.CSS&&CSS.escape?CSS.escape(c):c)+'"]');
+  if(b)b.focus();
+}
+
+/* Descarga desde el navegador: nada de esto se guarda en el servidor. */
+function descargarCsvSup(nombre,texto){
+  var url=URL.createObjectURL(new Blob([texto],{type:'text/csv;charset=utf-8'}));
+  var a=document.createElement('a');
+  a.href=url;a.download=nombre;document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);if(a.parentNode)a.parentNode.removeChild(a);},1000);
+  toast('Descargado: '+nombre);
+}
+
+function exportarListaSup(){
+  if(SUP)descargarCsvSup(nombreArchivoSup('lista',SUP.periodo,''),csvSup(filasCsvListaSup(SUP)));
+}
+
+function exportarFichaSup(clave){
+  var f=SUP&&SUP.fichas[clave];
+  if(f)descargarCsvSup(nombreArchivoSup('ficha',SUP.periodo,clave),csvSup(filasCsvFichaSup(f,periodoLabel(SUP.periodo))));
+}
 
 // ---- Pestaña Histórico: DECLARADO vs CAPTURADO ----
 var HIST=null;
