@@ -1,0 +1,31 @@
+# Cada hora pregunta al backend de Apps Script si puede leer la hoja.
+# Si falla (p. ej. Google revocó el permiso de Sheets), la ejecución sale en
+# rojo y GitHub manda un correo a quien mantiene este repo.
+# Arreglo habitual: en el editor de Apps Script ejecutar probarConexion y
+# aceptar TODOS los permisos.
+name: Vigilar backend
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  sonda:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Preguntar al /exec
+        run: |
+          # Mismo /exec que publicar_capturador.sh incrusta en las páginas.
+          URL='https://script.google.com/macros/s/AKfycbygXHFeDDQ2MWTwYoxN2xDd-RitXKUk6--xm3oltO4ZU-MtUVTbnkeEc9qHYgN3Y_8/exec'
+          for intento in 1 2 3; do
+            R=$(curl -sSL --max-time 60 -H 'Content-Type: text/plain;charset=utf-8' --data '{"action":"catalogo"}' "$URL" || true)
+            if echo "$R" | jq -e '.ok == true' >/dev/null 2>&1; then echo "Backend OK"; exit 0; fi
+            echo "Intento $intento falló: $(echo "$R" | head -c 400)"
+            sleep 30
+          done
+          echo "::error title=Backend SSOP caído::Los promotores no pueden cargar. Ejecuta probarConexion en el editor de Apps Script y acepta todos los permisos."
+          exit 1

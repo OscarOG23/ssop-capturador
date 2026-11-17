@@ -1289,6 +1289,7 @@ function abrirSelector(){
   var lista=leer(KPROM,[]);pintarSelector(lista);
   callBackend({action:'catalogo'}).then(function(r){
     if(r&&r.ok&&r.promotores){guardar(KPROM,r.promotores);pintarSelector(r.promotores);}
+    else if(r&&!r.ok){setSync('err','En mantenimiento');if(!lista.length)errorSelector('El sistema está en mantenimiento. Ya se avisó a coordinación; lo que tengas guardado no se pierde. Intenta más tarde.');return;}
     setSync('ok','En línea');
   }).catch(function(){setSync('err','Sin conexión');if(!lista.length)errorSelector('Sin conexión: abre esta página una vez con señal para ver la lista.');});
 }
@@ -1455,8 +1456,8 @@ function refrescarCrono(forzar){
     if(!r)return r;
     /* Rechazo definitivo (p. ej. aún no participa): se dice por qué y se
        olvida lo guardado. Un error transitorio conserva lo guardado. */
-    if(!r.ok){if(r.reintentar)return r;CRONO=null;guardar(KC.estado,null);ERROR_CRONO=r.error||'No se pudo cargar tu cronograma.';pintar();return r;}
-    ERROR_CRONO='';r._recibido=Date.now();CRONO=r;aplicarColaLocal();limpiarPlanesViejos();guardar(KC.estado,CRONO);
+    if(!r.ok){if(r.reintentar){FALLA_SERVIDOR=true;setSync('err','En mantenimiento');pintar();return r;}FALLA_SERVIDOR=false;CRONO=null;guardar(KC.estado,null);ERROR_CRONO=r.error||'No se pudo cargar tu cronograma.';pintar();return r;}
+    ERROR_CRONO='';FALLA_SERVIDOR=false;r._recibido=Date.now();CRONO=r;aplicarColaLocal();limpiarPlanesViejos();guardar(KC.estado,CRONO);
     setSync('ok','En línea');pintar();
     return r;
   }).catch(function(){setSync('err','Sin conexión');}).then(function(r){
@@ -1467,6 +1468,10 @@ function refrescarCrono(forzar){
   return pendiente;
 }
 var ERROR_CRONO='';
+/* El servidor contestó pero no pudo trabajar (p. ej. perdió el permiso de la
+   hoja). No es culpa de la señal del promotor: se le dice así para que no
+   reintente sin fin ni crea que perdió su información. */
+var FALLA_SERVIDOR=false;
 function aplicarColaLocal(){colaCrono().forEach(function(op){if(op.payload.promotor_clave===CFG.promotor_clave)aplicarOpLocal(op.action,op.payload);});}
 
 /* Lo que hace cada operación en la copia local, antes de que el servidor responda. */
@@ -1514,6 +1519,7 @@ function irASemana(sid){SEM_SEL=sid||SEM_SEL;verVista('semana');window.scrollTo(
 var SEM_SEL='',DIA_SEL='';
 function pintarAviso(){
   var c=el('avisoUnico');if(!c)return;
+  if(FALLA_SERVIDOR){c.innerHTML=htmlAviso('urgente',ICO.alerta,'El sistema está en mantenimiento','Ya se avisó a coordinación. Lo que tengas guardado no se pierde; vuelve a abrir esta página más tarde.','','');return;}
   if(!CRONO){c.innerHTML='';return;}
   if(fueraDeRangoC()){c.innerHTML=htmlAviso('urgente',ICO.senal,'Tu cronograma no está al día','Pasaron varios días sin señal. Conéctate a internet para ver tu semana actual.','','');return;}
   var a=avisoPrincipalC(CRONO.semanas,ahoraC());
